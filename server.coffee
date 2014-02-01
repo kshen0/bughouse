@@ -11,9 +11,15 @@ app.set "port", 8080
 # Tells server to support JSON, urlencoded, and multipart requests
 app.use express.bodyParser()
 
+# Specify views
+app.set "views", "#{__dirname}/views"
+app.set "view engine", "jade"
+app.use express.static("public", "#{__dirname}/public")
+
+
 # Handle GET to /
 app.get "/", (request, response) ->
-  response.send "Server is up"
+  response.render "index"
 
 # Start server
 http.listen app.get("port"), app.get("ipaddr"), () ->
