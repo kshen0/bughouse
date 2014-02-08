@@ -1,0 +1,17 @@
+body {
+  font: {
+    family: 'Open Sans', Helvetica, sans-serif;
+  }
+
+  $board-side: 560px;
+  #board-container {
+    margin: 0 auto;
+    width: $board-side;
+    height: $board-side; 
+    #board {
+      width: $board-side;
+      height: $board-side; 
+    }
+  }
+
+}

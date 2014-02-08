@@ -21,7 +21,7 @@ app.use express.bodyParser()
 
 
 
-# Handle GET to /
+# routes 
 app.get "/", (request, response) ->
   response.render "index"
 
@@ -32,6 +32,11 @@ app.post "/message", (request, response) ->
   name = request.body.name
   io.sockets.emit "incomingMessage", {message: message, name: name}
   response.json 200, {message: "Message received"}
+
+app.get "/game", (request, response) ->
+  response.render "game"
+
+## END routes
 
 io.on "connection", (socket) ->
   socket.on "newUser", (data) ->
