@@ -4,18 +4,33 @@ dark = "#34495e";
 light = "#95a5a6";
 
 oCanvas.domReady( ()->
+  # letters A - H
+  letters = (String.fromCharCode(letter) for letter in [65..72])
+  board = (("#{letter}#{num}" for num in [8..1]) for letter in letters)
+  console.log board
 
   canvas = oCanvas.create {canvas: "#board", background: dark}
   canvas.height = 8 * squareSize; 
   canvas.width = 8 * squareSize; 
-  createBoard(canvas)
-  ###
-  board = ((x for x in [1..8]) for x in [1..8])
-  console.log board
-  ###
+  drawBoard(canvas)
+  drawPieces(canvas, board)
 )
 
-createBoard = (canvas) ->
+drawPieces = (canvas, board) ->
+  for x in [0..7]
+    for y in [0..7]
+      text = canvas.display.text({
+        x: x * squareSize + squareSize / 2;
+        y: y * squareSize + squareSize / 2;
+        origin: {x: "center", y: "center"},
+        font: "bold 30px sans-serif",
+        text: board[x][y]
+        fill: "#2980b9";        
+      })
+      canvas.addChild(text)
+
+
+drawBoard = (canvas) ->
   createRectangle = (x, y, color) ->
     rectangle = canvas.display.rectangle( {
       x: x,
