@@ -1,13 +1,12 @@
+window.Game = window.Game or {}
+
 # constants
 squareSize = 70;
 dark = "#34495e";
 light = "#95a5a6";
 
 oCanvas.domReady( ()->
-  # letters A - H
-  letters = (String.fromCharCode(letter) for letter in [65..72])
-  board = (("#{letter}#{num}" for num in [8..1]) for letter in letters)
-  console.log board
+  board = createBoard()
 
   canvas = oCanvas.create {canvas: "#board", background: dark}
   canvas.height = 8 * squareSize; 
@@ -16,15 +15,29 @@ oCanvas.domReady( ()->
   drawPieces(canvas, board)
 )
 
+createBoard = () ->
+  # letters A - H
+  letters = (String.fromCharCode(letter) for letter in [65..72])
+  board = ((new window.Square("#{letter}#{num}") for num in [8..1]) for letter in letters)
+  console.log board[0][0]
+
+  for col in [0..7]
+    board[col][1].piece = new window.Pawn("white", "pawn")
+    board[col][6].piece = new window.Pawn("black", "pawn")
+
+  return board
+
 drawPieces = (canvas, board) ->
   for x in [0..7]
     for y in [0..7]
+      console.log "draw #{x} #{y}"
+      console.log board[x][y]
       text = canvas.display.text({
         x: x * squareSize + squareSize / 2;
         y: y * squareSize + squareSize / 2;
         origin: {x: "center", y: "center"},
-        font: "bold 30px sans-serif",
-        text: board[x][y]
+        font: "bold 12px sans-serif",
+        text: if board[x][y].piece? then board[x][y].piece.toString() else ""
         fill: "#2980b9";        
       })
       canvas.addChild(text)
