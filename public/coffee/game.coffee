@@ -17,8 +17,8 @@ oCanvas.domReady( ()->
 
 createBoard = () ->
   # letters A - H
-  letters = (String.fromCharCode(letter) for letter in [65..72])
-  board = ((new window.Square("#{letter}#{num}") for num in [8..1]) for letter in letters)
+  letters = (String.fromCharCode(letter) for letter in [72..65])
+  board = ((new window.Square("#{letter}#{num}") for num in [1..8]) for letter in letters)
   console.log board[0][0]
 
   for col in [0..7]
@@ -37,7 +37,7 @@ drawPieces = (canvas, board) ->
         y: y * squareSize + squareSize / 2;
         origin: {x: "center", y: "center"},
         font: "bold 12px sans-serif",
-        text: if board[x][y].piece? then board[x][y].piece.toString() else ""
+        text: if board[x][y].piece? then board[x][y].piece.toString() else board[x][y].name
         fill: "#2980b9";        
       })
       canvas.addChild(text)

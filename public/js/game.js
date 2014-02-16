@@ -28,7 +28,7 @@
     letters = (function() {
       var _i, _results;
       _results = [];
-      for (letter = _i = 65; _i <= 72; letter = ++_i) {
+      for (letter = _i = 72; _i >= 65; letter = --_i) {
         _results.push(String.fromCharCode(letter));
       }
       return _results;
@@ -41,7 +41,7 @@
         _results.push((function() {
           var _j, _results1;
           _results1 = [];
-          for (num = _j = 8; _j >= 1; num = --_j) {
+          for (num = _j = 1; _j <= 8; num = ++_j) {
             _results1.push(new window.Square("" + letter + num));
           }
           return _results1;
@@ -75,7 +75,7 @@
               y: "center"
             },
             font: "bold 12px sans-serif",
-            text: board[x][y].piece != null ? board[x][y].piece.toString() : "",
+            text: board[x][y].piece != null ? board[x][y].piece.toString() : board[x][y].name,
             fill: "#2980b9"
           });
           _results1.push(canvas.addChild(text));
