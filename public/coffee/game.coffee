@@ -5,6 +5,16 @@ squareSize = 70;
 dark = "#34495e";
 light = "#95a5a6";
 
+# allows array indexing by square coordinates
+A = 7
+B = 6
+C = 5
+D = 4
+E = 3
+F = 2
+G = 1
+H = 0
+
 oCanvas.domReady( ()->
   board = createBoard()
 
@@ -19,19 +29,44 @@ createBoard = () ->
   # letters A - H
   letters = (String.fromCharCode(letter) for letter in [72..65])
   board = ((new window.Square("#{letter}#{num}") for num in [1..8]) for letter in letters)
-  console.log board[0][0]
 
+  ## Create pieces
+  # Rows of pawns
   for col in [0..7]
     board[col][1].piece = new window.Pawn("white", "pawn")
     board[col][6].piece = new window.Pawn("black", "pawn")
+
+  # Rooks
+  board[A][0].piece = new window.Rook("white", "rook")
+  board[H][0].piece = new window.Rook("white", "rook")
+  board[A][7].piece = new window.Rook("black", "rook")
+  board[H][7].piece = new window.Rook("black", "rook")
+
+  # Knights 
+  board[B][0].piece = new window.Knight("white", "knight")
+  board[G][0].piece = new window.Knight("white", "knight")
+  board[B][7].piece = new window.Knight("black", "knight")
+  board[G][7].piece = new window.Knight("black", "knight")
+
+  # Bishops
+  board[C][0].piece = new window.Bishop("white", "bishop")
+  board[F][0].piece = new window.Bishop("white", "bishop")
+  board[C][7].piece = new window.Bishop("black", "bishop")
+  board[F][7].piece = new window.Bishop("black", "bishop")
+
+  # Kings
+  board[E][0].piece = new window.King("white", "king")
+  board[E][7].piece = new window.King("black", "king")
+
+  # Queens 
+  board[D][0].piece = new window.Queen("white", "queen")
+  board[D][7].piece = new window.Queen("black", "queen")
 
   return board
 
 drawPieces = (canvas, board) ->
   for x in [0..7]
     for y in [0..7]
-      console.log "draw #{x} #{y}"
-      console.log board[x][y]
       text = canvas.display.text({
         x: x * squareSize + squareSize / 2;
         y: y * squareSize + squareSize / 2;

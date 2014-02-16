@@ -5,12 +5,13 @@ window.Square = class Square
 
 window.Piece = class Piece
   constructor: (@color, @text) ->
-    console.log "creating piece"
 
   toString: () ->
     return "#{@color} #{@text}"
 
 window.Pawn = class Pawn extends Piece
-  constructor: () ->
-    console.log "pawn constructor"
-    super
+window.Rook = class Rook extends Piece
+window.Knight = class Knight extends Piece
+window.Bishop = class Bishop extends Piece
+window.King = class King extends Piece
+window.Queen = class Queen extends Piece
