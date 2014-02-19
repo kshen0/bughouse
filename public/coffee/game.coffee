@@ -76,6 +76,7 @@ drawPieces = (canvas, board) ->
         fill: "#2980b9";        
       })
       canvas.addChild(text)
+      text.dragAndDrop()
 
 
 drawBoard = (canvas) ->

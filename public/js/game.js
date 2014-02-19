@@ -107,7 +107,8 @@
             text: board[x][y].piece != null ? board[x][y].piece.toString() : board[x][y].name,
             fill: "#2980b9"
           });
-          _results1.push(canvas.addChild(text));
+          canvas.addChild(text);
+          _results1.push(text.dragAndDrop());
         }
         return _results1;
       })());

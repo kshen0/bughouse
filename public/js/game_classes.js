@@ -22,6 +22,12 @@
       this.text = text;
     }
 
+    Piece.prototype.validMove = function(square) {
+      if ((square.piece != null) && sqare.piece.color === this.color) {
+        return false;
+      }
+    };
+
     Piece.prototype.toString = function() {
       return "" + this.color + " " + this.text;
     };
