@@ -1,0 +1,8 @@
+body {
+  font-family: 'Open Sans', Helvetica, sans-serif; }
+  body #board-container {
+    width: 560px;
+    height: 560px; }
+    body #board-container #board {
+      width: 560px;
+      height: 560px; }

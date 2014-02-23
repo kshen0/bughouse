@@ -15,6 +15,12 @@ F = 2
 G = 1
 H = 0
 
+# vars for piece movement
+startSquare = undefined
+startX = undefined
+startY = undefined
+endSquare = undefined
+
 oCanvas.domReady( ()->
   board = createBoard()
 
@@ -76,7 +82,29 @@ drawPieces = (canvas, board) ->
         fill: "#2980b9";        
       })
       canvas.addChild(text)
-      text.dragAndDrop()
+      text.dragAndDrop( {
+        start: () ->
+          startX = this.x
+          startY = this.y
+          startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
+
+        end: () ->
+          if not startSquare.piece?
+            console.log "No piece selected"
+            return
+
+          piece = startSquare.piece
+          endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
+          that = this
+          piece.move endSquare, (isValid) ->
+            if not isValid
+              that.x = startX
+              that.y = startY 
+
+
+          #console.log sq.name
+          #console.log "#{this.abs_x}, #{this.abs_y}"
+      })
 
 
 drawBoard = (canvas) ->

@@ -12,20 +12,39 @@
       this.piece = piece;
     }
 
+    Square.prototype.movePiece = function(otherSquare) {
+      if (this.piece == null) {
+        return false;
+      }
+      if (this.piece.validMove(otherSquare) && squareIsValid(othersquare)) {
+        return console.log('foo');
+      }
+    };
+
     return Square;
 
   })();
 
   window.Piece = Piece = (function() {
-    function Piece(color, text) {
+    function Piece(color, text, square) {
       this.color = color;
       this.text = text;
+      this.square = square;
     }
 
-    Piece.prototype.validMove = function(square) {
-      if ((square.piece != null) && sqare.piece.color === this.color) {
+    Piece.prototype.move = function(square, cb) {
+      console.log(this);
+      if (this.validMove(square, this.color)) {
+        return cb(true);
+      }
+      return cb(false);
+    };
+
+    Piece.prototype.validMove = function(square, thisColor) {
+      if ((square.piece != null) && square.piece.color === thisColor) {
         return false;
       }
+      return true;
     };
 
     Piece.prototype.toString = function() {

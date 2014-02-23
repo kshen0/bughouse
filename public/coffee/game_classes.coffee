@@ -9,8 +9,7 @@ window.Square = class Square
     # return false if no piece on this square
     return false unless @piece?
 
-    if @piece.validMove(otherSquare)
-      and squareIsValid(othersquare)
+    if @piece.validMove(otherSquare) and squareIsValid(othersquare)
       console.log 'foo'
 
 
@@ -18,13 +17,23 @@ window.Square = class Square
 window.Piece = class Piece
   constructor: (@color, @text, @square) ->
 
-  move: (square) ->
-    if validMove(square)
+  move: (square, cb) ->
 
+    console.log @
+    if @validMove(square, @color)
+      return cb(true)
 
-  validMove: (square) ->
+    return cb(false)
+
+  validMove: (square, thisColor) ->
     # check that piece is moving in correct pattern
-    return false if square.piece? and sqare.piece.color == @color
+    # cannot move on to square containing own piece
+    return false if square.piece? and square.piece.color == thisColor
+    return true
+
+
+
+
 
   toString: () ->
     return "#{@color} #{@text}"
