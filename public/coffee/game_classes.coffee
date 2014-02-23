@@ -20,15 +20,15 @@ window.Piece = class Piece
   move: (square, cb) ->
 
     console.log @
-    if @validMove(square, @color)
+    if @validMove(square)
       return cb(true)
 
     return cb(false)
 
-  validMove: (square, thisColor) ->
+  validMove: (square) ->
     # check that piece is moving in correct pattern
     # cannot move on to square containing own piece
-    return false if square.piece? and square.piece.color == thisColor
+    return false if square.piece? and square.piece.color == @color
     return true
 
 

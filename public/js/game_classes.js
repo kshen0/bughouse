@@ -34,14 +34,14 @@
 
     Piece.prototype.move = function(square, cb) {
       console.log(this);
-      if (this.validMove(square, this.color)) {
+      if (this.validMove(square)) {
         return cb(true);
       }
       return cb(false);
     };
 
-    Piece.prototype.validMove = function(square, thisColor) {
-      if ((square.piece != null) && square.piece.color === thisColor) {
+    Piece.prototype.validMove = function(square) {
+      if ((square.piece != null) && square.piece.color === this.color) {
         return false;
       }
       return true;
