@@ -7,8 +7,10 @@
   window.Game = window.Game || {};
 
   window.Square = Square = (function() {
-    function Square(name, piece) {
+    function Square(name, row, col, piece) {
       this.name = name;
+      this.row = row;
+      this.col = col;
       this.piece = piece;
     }
 
@@ -32,16 +34,21 @@
       this.square = square;
     }
 
-    Piece.prototype.move = function(square, cb) {
-      console.log(this);
-      if (this.validMove(square)) {
+    Piece.prototype.move = function(startSquare, endSquare, cb) {
+      if (this.validMove(startSquare, endSquare)) {
+        if (endSquare.piece != null) {
+          endSquare.piece.graphic.remove();
+        }
+        this.square = endSquare;
+        endSquare.piece = startSquare.piece;
+        startSquare.piece = void 0;
         return cb(true);
       }
       return cb(false);
     };
 
-    Piece.prototype.validMove = function(square) {
-      if ((square.piece != null) && square.piece.color === this.color) {
+    Piece.prototype.validMove = function(startSquare, endSquare) {
+      if ((endSquare.piece != null) && endSquare.piece.color === this.color) {
         return false;
       }
       return true;
@@ -62,6 +69,32 @@
       _ref = Pawn.__super__.constructor.apply(this, arguments);
       return _ref;
     }
+
+    Pawn.prototype.validMove = function(startSquare, endSquare) {
+      var dir, homeRow, valid;
+      if (!Pawn.__super__.validMove.call(this, startSquare, endSquare)) {
+        return false;
+      }
+      valid = false;
+      dir = 1;
+      if (this.color === "black") {
+        dir = -1;
+      }
+      if (Math.abs(endSquare.x - startSquare.x) === 1 && (endSquare.piece != null) && endSquare.piece.color !== this.color) {
+        return true;
+      }
+      if (dir * (endSquare.row - startSquare.row) === 1 && endSquare.col === startSquare.col && (endSquare.piece == null)) {
+        return true;
+      }
+      homeRow = 2;
+      if (this.color === "black") {
+        homeRow = 7;
+      }
+      if (startSquare.row === homeRow && dir * (endSquare.row - startSquare.row) === 2 && endSquare.col === startSquare.col && (endSquare.piece == null)) {
+        return true;
+      }
+      return valid;
+    };
 
     return Pawn;
 

@@ -34,7 +34,11 @@ oCanvas.domReady( ()->
 createBoard = () ->
   # letters A - H
   letters = (String.fromCharCode(letter) for letter in [72..65])
-  board = ((new window.Square("#{letter}#{num}") for num in [1..8]) for letter in letters)
+  board = ((new window.Square("#{letter}#{num}", num, letter) for num in [1..8]) for letter in letters)
+  for y in [0..7]
+    for x in [0..7]
+      board[x][y].x = x
+      board[x][y].y = y
 
   ## Create pieces
   # Rows of pawns
@@ -81,6 +85,7 @@ drawPieces = (canvas, board) ->
         text: if board[x][y].piece? then board[x][y].piece.toString() else board[x][y].name
         fill: "#2980b9";        
       })
+      board[x][y].piece.graphic = text if board[x][y].piece?
       canvas.addChild(text)
       text.dragAndDrop( {
         start: () ->
@@ -96,10 +101,18 @@ drawPieces = (canvas, board) ->
           piece = startSquare.piece
           endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
           that = this
-          piece.move endSquare, (isValid) ->
+          piece.move startSquare, endSquare, (isValid) ->
             if not isValid
               that.x = startX
               that.y = startY 
+            else
+              ###
+              that.x = that.x % squareSize + squareSize / 2
+              that.y = that.y % squareSize + squareSize / 2
+              ###
+              console.log "moved #{endSquare.piece} to #{endSquare.name}"
+              console.log endSquare
+              console.log endSquare.piece
 
 
           #console.log sq.name

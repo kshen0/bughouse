@@ -48,7 +48,7 @@
   });
 
   createBoard = function() {
-    var board, col, letter, letters, num, _i;
+    var board, col, letter, letters, num, x, y, _i, _j, _k;
     letters = (function() {
       var _i, _results;
       _results = [];
@@ -66,14 +66,20 @@
           var _j, _results1;
           _results1 = [];
           for (num = _j = 1; _j <= 8; num = ++_j) {
-            _results1.push(new window.Square("" + letter + num));
+            _results1.push(new window.Square("" + letter + num, num, letter));
           }
           return _results1;
         })());
       }
       return _results;
     })();
-    for (col = _i = 0; _i <= 7; col = ++_i) {
+    for (y = _i = 0; _i <= 7; y = ++_i) {
+      for (x = _j = 0; _j <= 7; x = ++_j) {
+        board[x][y].x = x;
+        board[x][y].y = y;
+      }
+    }
+    for (col = _k = 0; _k <= 7; col = ++_k) {
       board[col][1].piece = new window.Pawn("white", "pawn");
       board[col][6].piece = new window.Pawn("black", "pawn");
     }
@@ -115,6 +121,9 @@
             text: board[x][y].piece != null ? board[x][y].piece.toString() : board[x][y].name,
             fill: "#2980b9"
           });
+          if (board[x][y].piece != null) {
+            board[x][y].piece.graphic = text;
+          }
           canvas.addChild(text);
           _results1.push(text.dragAndDrop({
             start: function() {
@@ -131,10 +140,19 @@
               piece = startSquare.piece;
               endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)];
               that = this;
-              return piece.move(endSquare, function(isValid) {
+              return piece.move(startSquare, endSquare, function(isValid) {
                 if (!isValid) {
                   that.x = startX;
                   return that.y = startY;
+                } else {
+                  /*
+                  that.x = that.x % squareSize + squareSize / 2
+                  that.y = that.y % squareSize + squareSize / 2
+                  */
+
+                  console.log("moved " + endSquare.piece + " to " + endSquare.name);
+                  console.log(endSquare);
+                  return console.log(endSquare.piece);
                 }
               });
             }

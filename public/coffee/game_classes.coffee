@@ -3,7 +3,7 @@ window.Game = window.Game or {}
 # TODO: game controller class
 
 window.Square = class Square
-  constructor: (@name, @piece) ->
+  constructor: (@name, @row, @col, @piece) ->
 
   movePiece: (otherSquare) ->
     # return false if no piece on this square
@@ -17,18 +17,19 @@ window.Square = class Square
 window.Piece = class Piece
   constructor: (@color, @text, @square) ->
 
-  move: (square, cb) ->
-
-    console.log @
-    if @validMove(square)
+  move: (startSquare, endSquare, cb) ->
+    if @validMove(startSquare, endSquare)
+      endSquare.piece.graphic.remove() if endSquare.piece?
+      @square = endSquare
+      endSquare.piece = startSquare.piece
+      startSquare.piece = undefined
       return cb(true)
-
     return cb(false)
 
-  validMove: (square) ->
+  validMove: (startSquare, endSquare) ->
     # check that piece is moving in correct pattern
     # cannot move on to square containing own piece
-    return false if square.piece? and square.piece.color == @color
+    return false if endSquare.piece? and endSquare.piece.color == @color
     return true
 
 
@@ -39,6 +40,39 @@ window.Piece = class Piece
     return "#{@color} #{@text}"
 
 window.Pawn = class Pawn extends Piece
+  validMove: (startSquare, endSquare) ->
+    # return false unless the move passes generic move checking
+    return false unless super(startSquare, endSquare)
+
+    valid = false
+    dir = 1     # 1 for moving "up" board from 1 to 8, -1 for moving "down" board from 8 to 1
+    if @color == "black"
+      dir = -1
+
+    # case 1: diagonal capture
+    if Math.abs(endSquare.x - startSquare.x) is 1 and
+    endSquare.piece? and endSquare.piece.color isnt @color
+      return true
+
+    # case 2: forward straight move by 1, no capture
+    if dir * (endSquare.row - startSquare.row) is 1 and 
+    endSquare.col is startSquare.col and
+    not endSquare.piece?
+      return true
+
+    # case 3: forward move by 2, no capture, from game start position
+    homeRow = 2
+    if @color is "black"  
+      homeRow = 7
+    if startSquare.row is homeRow and
+    dir * (endSquare.row - startSquare.row) is 2 and
+    endSquare.col is startSquare.col and
+    not endSquare.piece?
+      return true
+
+    # case 4: en passant
+    return valid
+
 window.Rook = class Rook extends Piece
 window.Knight = class Knight extends Piece
 window.Bishop = class Bishop extends Piece
