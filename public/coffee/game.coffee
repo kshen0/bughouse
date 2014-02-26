@@ -21,6 +21,8 @@ startX = undefined
 startY = undefined
 endSquare = undefined
 
+board = undefined
+
 oCanvas.domReady( ()->
   board = createBoard()
 
@@ -41,16 +43,17 @@ createBoard = () ->
       board[x][y].y = y
 
   ## Create pieces
-  # Rows of pawns
-  for col in [0..7]
-    board[col][1].piece = new window.Pawn("white", "pawn")
-    board[col][6].piece = new window.Pawn("black", "pawn")
-
   # Rooks
   board[A][0].piece = new window.Rook("white", "rook")
   board[H][0].piece = new window.Rook("white", "rook")
   board[A][7].piece = new window.Rook("black", "rook")
   board[H][7].piece = new window.Rook("black", "rook")
+  return board
+
+  # Rows of pawns
+  for col in [0..7]
+    board[col][1].piece = new window.Pawn("white", "pawn")
+    board[col][6].piece = new window.Pawn("black", "pawn")
 
   # Knights 
   board[B][0].piece = new window.Knight("white", "knight")
@@ -102,17 +105,24 @@ drawPieces = (canvas, board) ->
           endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
           that = this
           piece.move startSquare, endSquare, (isValid) ->
-            if not isValid
+            if not isValid or isObstructed(startSquare, endSquare, board)
               that.x = startX
               that.y = startY 
             else
-              ###
-              that.x = that.x % squareSize + squareSize / 2
-              that.y = that.y % squareSize + squareSize / 2
-              ###
-              console.log "moved #{endSquare.piece} to #{endSquare.name}"
-              console.log endSquare
-              console.log endSquare.piece
+              endSquare.piece.graphic.remove() if endSquare.piece?
+              startSquare.piece.square = endSquare
+              endSquare.piece = startSquare.piece
+              startSquare.piece = undefined
+
+            #else
+            ###
+            that.x = that.x % squareSize + squareSize / 2
+            that.y = that.y % squareSize + squareSize / 2
+            ##j#
+            console.log "moved #{endSquare.piece} to #{endSquare.name}"
+            console.log endSquare
+            console.log endSquare.piece
+            ###
 
 
           #console.log sq.name
@@ -136,4 +146,31 @@ drawBoard = (canvas) ->
       createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then light else dark)
       #console.log "#{x}, #{y}"
 
+isObstructed = (startSquare, endSquare, board) ->
+  # vertical rank check
+  if endSquare.x == startSquare.x
+    # check in direction from lowest to highest row number
+    i = Math.min(startSquare.y, endSquare.y) + 1
+    j = Math.max(startSquare.y, endSquare.y) - 1
+
+    # no obstruction if square are adjacent
+    return false if j - i < 0 
+
+    for row in [i..j]
+      return true if board[startSquare.x][row].piece?
+
+  # horizontal rank check
+  if endSquare.y == startSquare.y
+    # check in direction from lowest to highest col number
+    i = Math.min(startSquare.x, endSquare.x) + 1
+    j = Math.max(startSquare.x, endSquare.x) - 1
+
+    # no obstruction if square are adjacent
+    return false if j - i < 0 
+
+    console.log "check cols #{i} to #{j}"
+    for col in [i..j]
+      return true if board[col][startSquare.y].piece?
+
+  return false
 

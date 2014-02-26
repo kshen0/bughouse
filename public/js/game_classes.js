@@ -36,12 +36,14 @@
 
     Piece.prototype.move = function(startSquare, endSquare, cb) {
       if (this.validMove(startSquare, endSquare)) {
-        if (endSquare.piece != null) {
-          endSquare.piece.graphic.remove();
-        }
-        this.square = endSquare;
-        endSquare.piece = startSquare.piece;
-        startSquare.piece = void 0;
+        console.log("valid move");
+        /*
+        endSquare.piece.graphic.remove() if endSquare.piece?
+        @square = endSquare
+        endSquare.piece = startSquare.piece
+        startSquare.piece = undefined
+        */
+
         return cb(true);
       }
       return cb(false);
@@ -71,11 +73,10 @@
     }
 
     Pawn.prototype.validMove = function(startSquare, endSquare) {
-      var dir, homeRow, valid;
+      var dir, homeRow;
       if (!Pawn.__super__.validMove.call(this, startSquare, endSquare)) {
         return false;
       }
-      valid = false;
       dir = 1;
       if (this.color === "black") {
         dir = -1;
@@ -93,7 +94,7 @@
       if (startSquare.row === homeRow && dir * (endSquare.row - startSquare.row) === 2 && endSquare.col === startSquare.col && (endSquare.piece == null)) {
         return true;
       }
-      return valid;
+      return false;
     };
 
     return Pawn;
@@ -107,6 +108,19 @@
       _ref1 = Rook.__super__.constructor.apply(this, arguments);
       return _ref1;
     }
+
+    Rook.prototype.validMove = function(startSquare, endSquare) {
+      if (!Rook.__super__.validMove.call(this, startSquare, endSquare)) {
+        return false;
+      }
+      if (endSquare.x !== startSquare.x && endSquare.y !== startSquare.y) {
+        console.log("invalid rook move");
+        console.log(startSquare);
+        console.log(endSquare);
+        return false;
+      }
+      return true;
+    };
 
     return Rook;
 

@@ -12,17 +12,18 @@ window.Square = class Square
     if @piece.validMove(otherSquare) and squareIsValid(othersquare)
       console.log 'foo'
 
-
-
 window.Piece = class Piece
   constructor: (@color, @text, @square) ->
 
   move: (startSquare, endSquare, cb) ->
     if @validMove(startSquare, endSquare)
+      console.log "valid move"
+      ###
       endSquare.piece.graphic.remove() if endSquare.piece?
       @square = endSquare
       endSquare.piece = startSquare.piece
       startSquare.piece = undefined
+      ###
       return cb(true)
     return cb(false)
 
@@ -44,7 +45,6 @@ window.Pawn = class Pawn extends Piece
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
 
-    valid = false
     dir = 1     # 1 for moving "up" board from 1 to 8, -1 for moving "down" board from 8 to 1
     if @color == "black"
       dir = -1
@@ -70,10 +70,23 @@ window.Pawn = class Pawn extends Piece
     not endSquare.piece?
       return true
 
-    # case 4: en passant
-    return valid
+    # TODO case 4: en passant
+
+    return false
 
 window.Rook = class Rook extends Piece
+  validMove: (startSquare, endSquare) ->
+    # return false unless the move passes generic move checking
+    return false unless super(startSquare, endSquare)
+
+    if endSquare.x != startSquare.x and endSquare.y != startSquare.y
+      console.log "invalid rook move"
+      console.log startSquare
+      console.log endSquare
+      return false
+
+    return true
+
 window.Knight = class Knight extends Piece
 window.Bishop = class Bishop extends Piece
 window.King = class King extends Piece
