@@ -43,17 +43,16 @@ createBoard = () ->
       board[x][y].y = y
 
   ## Create pieces
+  # Rows of pawns
+  for col in [0..7]
+    board[col][1].piece = new window.Pawn("white", "pawn")
+    board[col][6].piece = new window.Pawn("black", "pawn")
+
   # Rooks
   board[A][0].piece = new window.Rook("white", "rook")
   board[H][0].piece = new window.Rook("white", "rook")
   board[A][7].piece = new window.Rook("black", "rook")
   board[H][7].piece = new window.Rook("black", "rook")
-  return board
-
-  # Rows of pawns
-  for col in [0..7]
-    board[col][1].piece = new window.Pawn("white", "pawn")
-    board[col][6].piece = new window.Pawn("black", "pawn")
 
   # Knights 
   board[B][0].piece = new window.Knight("white", "knight")
@@ -80,55 +79,40 @@ createBoard = () ->
 drawPieces = (canvas, board) ->
   for x in [0..7]
     for y in [0..7]
-      text = canvas.display.text({
-        x: x * squareSize + squareSize / 2;
-        y: y * squareSize + squareSize / 2;
-        origin: {x: "center", y: "center"},
-        font: "bold 12px sans-serif",
-        text: if board[x][y].piece? then board[x][y].piece.toString() else board[x][y].name
-        fill: "#2980b9";        
-      })
-      board[x][y].piece.graphic = text if board[x][y].piece?
-      canvas.addChild(text)
-      text.dragAndDrop( {
-        start: () ->
-          startX = this.x
-          startY = this.y
-          startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
+      if board[x][y].piece?
+        img = canvas.display.image({
+          x: x * squareSize + squareSize / 2;
+          y: y * squareSize + squareSize / 2;
+          origin: {x: "center", y: "center"}
+          image: board[x][y].piece.graphic
+        })
+        canvas.addChild(img)
+        img.dragAndDrop( {
+          start: () ->
+            startX = this.x
+            startY = this.y
+            startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
 
-        end: () ->
-          if not startSquare.piece?
-            console.log "No piece selected"
-            return
+          end: () ->
+            if not startSquare.piece?
+              console.log "No piece selected"
+              return
 
-          piece = startSquare.piece
-          endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
-          that = this
-          piece.move startSquare, endSquare, (isValid) ->
-            if not isValid or isObstructed(startSquare, endSquare, board)
-              that.x = startX
-              that.y = startY 
-            else
-              endSquare.piece.graphic.remove() if endSquare.piece?
-              startSquare.piece.square = endSquare
-              endSquare.piece = startSquare.piece
-              startSquare.piece = undefined
-
-            #else
-            ###
-            that.x = that.x % squareSize + squareSize / 2
-            that.y = that.y % squareSize + squareSize / 2
-            ##j#
-            console.log "moved #{endSquare.piece} to #{endSquare.name}"
-            console.log endSquare
-            console.log endSquare.piece
-            ###
-
-
-          #console.log sq.name
-          #console.log "#{this.abs_x}, #{this.abs_y}"
-      })
-
+            piece = startSquare.piece
+            endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
+            that = this
+            piece.move startSquare, endSquare, (isValid) ->
+              if not isValid or isObstructed(startSquare, endSquare, board)
+                that.x = startX
+                that.y = startY 
+              else
+                endSquare.piece.graphic.remove() if endSquare.piece?
+                startSquare.piece.square = endSquare
+                endSquare.piece = startSquare.piece
+                startSquare.piece = undefined
+                that.x = (that.x - that.x % squareSize) + squareSize / 2
+                that.y = (that.y - that.y % squareSize) + squareSize / 2
+        })
 
 drawBoard = (canvas) ->
   createRectangle = (x, y, color) ->
@@ -171,6 +155,26 @@ isObstructed = (startSquare, endSquare, board) ->
     console.log "check cols #{i} to #{j}"
     for col in [i..j]
       return true if board[col][startSquare.y].piece?
+
+  # diagonal obstruction check
+  xDist = endSquare.x - startSquare.x
+  yDist = endSquare.y - startSquare.y
+  console.log "xDist #{xDist}"
+  console.log "yDist #{yDist}"
+  slope = xDist / yDist
+  if Math.abs(slope) == 1 and Math.abs(xDist) > 1 and Math.abs(yDist) > 1
+    #range = [startSquare.x + slope .. endSquare.x - slope]
+
+    # parallel arrays for x, y of squares in between
+    xRange = ([startSquare.x .. endSquare.x])[1...-1]
+    yRange = ([startSquare.y .. endSquare.y])[1...-1]
+    console.log "xrange"
+    console.log xRange
+    console.log "yrange"
+    console.log yRange
+    for i in [0...xRange.length]
+      console.log board[xRange[i]][yRange[i]]
+      return true if board[xRange[i]][yRange[i]].piece?
 
   return false
 

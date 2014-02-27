@@ -13,7 +13,8 @@ window.Square = class Square
       console.log 'foo'
 
 window.Piece = class Piece
-  constructor: (@color, @text, @square) ->
+  constructor: (@color, @text) ->
+    @graphic = "img/#{text}_#{color}.png"
 
   move: (startSquare, endSquare, cb) ->
     if @validMove(startSquare, endSquare)
@@ -32,10 +33,6 @@ window.Piece = class Piece
     # cannot move on to square containing own piece
     return false if endSquare.piece? and endSquare.piece.color == @color
     return true
-
-
-
-
 
   toString: () ->
     return "#{@color} #{@text}"
@@ -80,14 +77,25 @@ window.Rook = class Rook extends Piece
     return false unless super(startSquare, endSquare)
 
     if endSquare.x != startSquare.x and endSquare.y != startSquare.y
+      ###
       console.log "invalid rook move"
       console.log startSquare
       console.log endSquare
+      ###
       return false
 
     return true
 
 window.Knight = class Knight extends Piece
 window.Bishop = class Bishop extends Piece
+  validMove: (startSquare, endSquare) ->
+    # return false unless the move passes generic move checking
+    return false unless super(startSquare, endSquare)
+
+    xDist = endSquare.x - startSquare.x
+    yDist = endSquare.y - startSquare.y
+    slope = xDist / yDist
+    return Math.abs(slope)
+
 window.King = class King extends Piece
 window.Queen = class Queen extends Piece

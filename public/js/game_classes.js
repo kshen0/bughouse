@@ -28,10 +28,10 @@
   })();
 
   window.Piece = Piece = (function() {
-    function Piece(color, text, square) {
+    function Piece(color, text) {
       this.color = color;
       this.text = text;
-      this.square = square;
+      this.graphic = "img/" + text + "_" + color + ".png";
     }
 
     Piece.prototype.move = function(startSquare, endSquare, cb) {
@@ -114,9 +114,12 @@
         return false;
       }
       if (endSquare.x !== startSquare.x && endSquare.y !== startSquare.y) {
-        console.log("invalid rook move");
-        console.log(startSquare);
-        console.log(endSquare);
+        /*
+        console.log "invalid rook move"
+        console.log startSquare
+        console.log endSquare
+        */
+
         return false;
       }
       return true;
@@ -145,6 +148,17 @@
       _ref3 = Bishop.__super__.constructor.apply(this, arguments);
       return _ref3;
     }
+
+    Bishop.prototype.validMove = function(startSquare, endSquare) {
+      var slope, xDist, yDist;
+      if (!Bishop.__super__.validMove.call(this, startSquare, endSquare)) {
+        return false;
+      }
+      xDist = endSquare.x - startSquare.x;
+      yDist = endSquare.y - startSquare.y;
+      slope = xDist / yDist;
+      return Math.abs(slope);
+    };
 
     return Bishop;
 

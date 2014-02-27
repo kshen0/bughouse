@@ -81,15 +81,14 @@
         board[x][y].y = y;
       }
     }
-    board[A][0].piece = new window.Rook("white", "rook");
-    board[H][0].piece = new window.Rook("white", "rook");
-    board[A][7].piece = new window.Rook("black", "rook");
-    board[H][7].piece = new window.Rook("black", "rook");
-    return board;
     for (col = _k = 0; _k <= 7; col = ++_k) {
       board[col][1].piece = new window.Pawn("white", "pawn");
       board[col][6].piece = new window.Pawn("black", "pawn");
     }
+    board[A][0].piece = new window.Rook("white", "rook");
+    board[H][0].piece = new window.Rook("white", "rook");
+    board[A][7].piece = new window.Rook("black", "rook");
+    board[H][7].piece = new window.Rook("black", "rook");
     board[B][0].piece = new window.Knight("white", "knight");
     board[G][0].piece = new window.Knight("white", "knight");
     board[B][7].piece = new window.Knight("black", "knight");
@@ -106,67 +105,59 @@
   };
 
   drawPieces = function(canvas, board) {
-    var text, x, y, _i, _results;
+    var img, x, y, _i, _results;
     _results = [];
     for (x = _i = 0; _i <= 7; x = ++_i) {
       _results.push((function() {
         var _j, _results1;
         _results1 = [];
         for (y = _j = 0; _j <= 7; y = ++_j) {
-          text = canvas.display.text({
-            x: x * squareSize + squareSize / 2,
-            y: y * squareSize + squareSize / 2,
-            origin: {
-              x: "center",
-              y: "center"
-            },
-            font: "bold 12px sans-serif",
-            text: board[x][y].piece != null ? board[x][y].piece.toString() : board[x][y].name,
-            fill: "#2980b9"
-          });
           if (board[x][y].piece != null) {
-            board[x][y].piece.graphic = text;
-          }
-          canvas.addChild(text);
-          _results1.push(text.dragAndDrop({
-            start: function() {
-              startX = this.x;
-              startY = this.y;
-              return startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)];
-            },
-            end: function() {
-              var piece, that;
-              if (startSquare.piece == null) {
-                console.log("No piece selected");
-                return;
-              }
-              piece = startSquare.piece;
-              endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)];
-              that = this;
-              return piece.move(startSquare, endSquare, function(isValid) {
-                if (!isValid || isObstructed(startSquare, endSquare, board)) {
-                  that.x = startX;
-                  return that.y = startY;
-                } else {
-                  if (endSquare.piece != null) {
-                    endSquare.piece.graphic.remove();
-                  }
-                  startSquare.piece.square = endSquare;
-                  endSquare.piece = startSquare.piece;
-                  return startSquare.piece = void 0;
+            img = canvas.display.image({
+              x: x * squareSize + squareSize / 2,
+              y: y * squareSize + squareSize / 2,
+              origin: {
+                x: "center",
+                y: "center"
+              },
+              image: board[x][y].piece.graphic
+            });
+            canvas.addChild(img);
+            _results1.push(img.dragAndDrop({
+              start: function() {
+                startX = this.x;
+                startY = this.y;
+                return startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)];
+              },
+              end: function() {
+                var piece, that;
+                if (startSquare.piece == null) {
+                  console.log("No piece selected");
+                  return;
                 }
-                /*
-                that.x = that.x % squareSize + squareSize / 2
-                that.y = that.y % squareSize + squareSize / 2
-                ##j#
-                console.log "moved #{endSquare.piece} to #{endSquare.name}"
-                console.log endSquare
-                console.log endSquare.piece
-                */
-
-              });
-            }
-          }));
+                piece = startSquare.piece;
+                endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)];
+                that = this;
+                return piece.move(startSquare, endSquare, function(isValid) {
+                  if (!isValid || isObstructed(startSquare, endSquare, board)) {
+                    that.x = startX;
+                    return that.y = startY;
+                  } else {
+                    if (endSquare.piece != null) {
+                      endSquare.piece.graphic.remove();
+                    }
+                    startSquare.piece.square = endSquare;
+                    endSquare.piece = startSquare.piece;
+                    startSquare.piece = void 0;
+                    that.x = (that.x - that.x % squareSize) + squareSize / 2;
+                    return that.y = (that.y - that.y % squareSize) + squareSize / 2;
+                  }
+                });
+              }
+            }));
+          } else {
+            _results1.push(void 0);
+          }
         }
         return _results1;
       })());
@@ -202,7 +193,7 @@
   };
 
   isObstructed = function(startSquare, endSquare, board) {
-    var col, i, j, row, _i, _j;
+    var col, i, j, row, slope, xDist, xRange, yDist, yRange, _i, _j, _k, _l, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results, _results1;
     if (endSquare.x === startSquare.x) {
       i = Math.min(startSquare.y, endSquare.y) + 1;
       j = Math.max(startSquare.y, endSquare.y) - 1;
@@ -224,6 +215,33 @@
       console.log("check cols " + i + " to " + j);
       for (col = _j = i; i <= j ? _j <= j : _j >= j; col = i <= j ? ++_j : --_j) {
         if (board[col][startSquare.y].piece != null) {
+          return true;
+        }
+      }
+    }
+    xDist = endSquare.x - startSquare.x;
+    yDist = endSquare.y - startSquare.y;
+    console.log("xDist " + xDist);
+    console.log("yDist " + yDist);
+    slope = xDist / yDist;
+    if (Math.abs(slope) === 1 && Math.abs(xDist) > 1 && Math.abs(yDist) > 1) {
+      xRange = (function() {
+        _results = [];
+        for (var _k = _ref = startSquare.x, _ref1 = endSquare.x; _ref <= _ref1 ? _k <= _ref1 : _k >= _ref1; _ref <= _ref1 ? _k++ : _k--){ _results.push(_k); }
+        return _results;
+      }).apply(this).slice(1, -1);
+      yRange = (function() {
+        _results1 = [];
+        for (var _l = _ref2 = startSquare.y, _ref3 = endSquare.y; _ref2 <= _ref3 ? _l <= _ref3 : _l >= _ref3; _ref2 <= _ref3 ? _l++ : _l--){ _results1.push(_l); }
+        return _results1;
+      }).apply(this).slice(1, -1);
+      console.log("xrange");
+      console.log(xRange);
+      console.log("yrange");
+      console.log(yRange);
+      for (i = _m = 0, _ref4 = xRange.length; 0 <= _ref4 ? _m < _ref4 : _m > _ref4; i = 0 <= _ref4 ? ++_m : --_m) {
+        console.log(board[xRange[i]][yRange[i]]);
+        if (board[xRange[i]][yRange[i]].piece != null) {
           return true;
         }
       }
