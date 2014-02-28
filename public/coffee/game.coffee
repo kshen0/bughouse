@@ -27,7 +27,7 @@ canvas = undefined
 # game vars
 board = undefined
 playerColor = undefined
-turn = 'white'
+whitesTurn = true
 
 # socket io vars
 serverBaseUrl = document.domain
@@ -149,6 +149,11 @@ drawPieces = (canvas, board) ->
               that.x = startX
               that.y = startY 
 
+            if (playerColor is 'white' and not whitesTurn) or (playerColor is 'black' and whitesTurn)
+              console.log "#{playerColor} cannot move when whitesTurn=#{whitesTurn}"
+              revert()
+              return
+
             if piece.color isnt playerColor
               console.log "Player is #{playerColor}. Can't move #{piece.color} piece."
               revert()
@@ -159,8 +164,7 @@ drawPieces = (canvas, board) ->
               if not isValid or isObstructed(startSquare, endSquare, board)
                 revert()
               else
-                moveSuccess(that, startSquare, endSquare, true)
-        })
+                moveSuccess(that, startSquare, endSquare, true) })
 
 # TODO validate move serverside; check for authenticity client side
 moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
@@ -184,6 +188,7 @@ moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   displayObj.x = (displayObj.x - displayObj.x % squareSize) + squareSize / 2
   displayObj.y = (displayObj.y - displayObj.y % squareSize) + squareSize / 2
   ###
+  whitesTurn = not whitesTurn
   canvas.redraw()
 
 
