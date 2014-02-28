@@ -1,9 +1,9 @@
 window.Game = window.Game or {}
 
 # constants
-squareSize = 70;
-dark = "#34495e";
-light = "#95a5a6";
+squareSize = 70
+dark = "#34495e"
+light = "#95a5a6"
 
 # allows array indexing by square coordinates
 A = 7
@@ -21,17 +21,41 @@ startX = undefined
 startY = undefined
 endSquare = undefined
 
+# game vars
 board = undefined
+playerColor = undefined
+
+# socket io vars
+serverBaseUrl = document.domain
+socket = io.connect serverBaseUrl
+sessionId = ''
 
 oCanvas.domReady( ()->
+  init()
   board = createBoard()
 
   canvas = oCanvas.create {canvas: "#board", background: dark}
-  canvas.height = 8 * squareSize; 
+  canvas.height = 8 * squareSize;
   canvas.width = 8 * squareSize; 
   drawBoard(canvas)
   drawPieces(canvas, board)
 )
+
+init = () ->
+  socket.on 'connect', () ->
+    sessionId = socket.socket.sessionid
+    console.log "sessionId #{sessionId}"
+    socket.emit 'newUser', {id: sessionId, name: "player"}
+    $.get "/game/playercolor/#{sessionId}", (resp) ->
+      playerColor = resp
+      console.log "player color is #{playerColor}"
+
+  ###
+  socket.on 'newConnection', (data) ->
+    console.log "new connection"
+  ###
+
+
 
 createBoard = () ->
   # letters A - H
@@ -81,11 +105,12 @@ drawPieces = (canvas, board) ->
     for y in [0..7]
       if board[x][y].piece?
         img = canvas.display.image({
-          x: x * squareSize + squareSize / 2;
-          y: y * squareSize + squareSize / 2;
+          x: x * squareSize + squareSize / 2
+          y: y * squareSize + squareSize / 2
           origin: {x: "center", y: "center"}
           image: board[x][y].piece.graphic
         })
+        board[x][y].piece.displayObject = img
         canvas.addChild(img)
         img.dragAndDrop( {
           start: () ->
@@ -94,19 +119,28 @@ drawPieces = (canvas, board) ->
             startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
 
           end: () ->
-            if not startSquare.piece?
+            that = this
+            piece = startSquare.piece
+
+            if not piece?
               console.log "No piece selected"
               return
 
-            piece = startSquare.piece
+            revert = () ->
+              that.x = startX
+              that.y = startY 
+
+            if piece.color isnt playerColor
+              console.log "Player is #{playerColor}. Can't move #{piece.color} piece."
+              revert()
+              return
+
             endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
-            that = this
             piece.move startSquare, endSquare, (isValid) ->
               if not isValid or isObstructed(startSquare, endSquare, board)
-                that.x = startX
-                that.y = startY 
+                revert()
               else
-                endSquare.piece.graphic.remove() if endSquare.piece?
+                endSquare.piece.displayObject.remove() if endSquare.piece?
                 startSquare.piece.square = endSquare
                 endSquare.piece = startSquare.piece
                 startSquare.piece = undefined

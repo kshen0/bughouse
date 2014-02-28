@@ -7,7 +7,7 @@ http = require("http").createServer(app)
 _ = require "underscore"
 io = require("socket.io").listen(http)
 
-participants = []
+participants = {} 
 
 # Server config
 app.set "ipaddr", "127.0.0.1"
@@ -36,12 +36,22 @@ app.post "/message", (request, response) ->
 app.get "/game", (request, response) ->
   response.render "game"
 
+app.get "/game/playercolor/:sessionId", (request, response) ->
+  sessionId = request.params.sessionId
+  console.log "request for player color for player #{request.params.sessionId}"
+  response.send participants[sessionId].color
+
 ## END routes
 
 io.on "connection", (socket) ->
   socket.on "newUser", (data) ->
-    participants.push {id: data.id, name: data.name}
-    io.sockets.emit "newConnection", {participants: participants}
+    if Object.keys(participants).length % 2 == 0
+      playerColor = "white"
+    else
+      playerColor = "black"
+
+    participants[data.id] = name: data.name, color: playerColor
+    #io.sockets.emit "newConnection", {participants: participants}
 
 io.on "disconnect", () ->
   participants = _.without(participants, _.findWhere(participants, {id: socket.id}))

@@ -75,18 +75,18 @@ window.Rook = class Rook extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
-
-    if endSquare.x != startSquare.x and endSquare.y != startSquare.y
-      ###
-      console.log "invalid rook move"
-      console.log startSquare
-      console.log endSquare
-      ###
-      return false
-
-    return true
+    return not endSquare.x != startSquare.x and endSquare.y != startSquare.y
 
 window.Knight = class Knight extends Piece
+  validMove: (startSquare, endSquare) ->
+    # return false unless the move passes generic move checking
+    return false unless super(startSquare, endSquare)
+
+    xDist = Math.abs(endSquare.x - startSquare.x)
+    yDist = Math.abs(endSquare.y - startSquare.y)
+
+    return xDist is 1 and yDist is 2 or xDist is 2 and yDist is 1
+
 window.Bishop = class Bishop extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
@@ -95,7 +95,40 @@ window.Bishop = class Bishop extends Piece
     xDist = endSquare.x - startSquare.x
     yDist = endSquare.y - startSquare.y
     slope = xDist / yDist
-    return Math.abs(slope)
+    return Math.abs(slope) is 1
 
 window.King = class King extends Piece
+  validMove: (startSquare, endSquare) ->
+    # TODO mark squares as threatened
+    # king cannot move onto threatened squares
+
+    # return false unless the move passes generic move checking
+    return false unless super(startSquare, endSquare)
+
+    xDist = Math.abs(endSquare.x - startSquare.x)
+    yDist = Math.abs(endSquare.y - startSquare.y)
+    return xDist <= 1 and yDist <= 1
+
+    # TODO castling
+
+
 window.Queen = class Queen extends Piece
+  validMove: (startSquare, endSquare) ->
+    # return false unless the move passes generic move checking
+    return false unless super(startSquare, endSquare)
+
+    xDist = endSquare.x - startSquare.x
+    yDist = endSquare.y - startSquare.y
+    slope = xDist / yDist
+
+    # diagonal move
+    if Math.abs(slope) == 1
+      return true
+
+    # horizontal move
+    if endSquare.x != startSquare.x and endSquare.y == startSquare.y
+      return true
+
+    #vertical move
+    if endSquare.x == startSquare.x and endSquare.y != startSquare.y
+      return true

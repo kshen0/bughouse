@@ -113,16 +113,7 @@
       if (!Rook.__super__.validMove.call(this, startSquare, endSquare)) {
         return false;
       }
-      if (endSquare.x !== startSquare.x && endSquare.y !== startSquare.y) {
-        /*
-        console.log "invalid rook move"
-        console.log startSquare
-        console.log endSquare
-        */
-
-        return false;
-      }
-      return true;
+      return !endSquare.x !== startSquare.x && endSquare.y !== startSquare.y;
     };
 
     return Rook;
@@ -136,6 +127,16 @@
       _ref2 = Knight.__super__.constructor.apply(this, arguments);
       return _ref2;
     }
+
+    Knight.prototype.validMove = function(startSquare, endSquare) {
+      var xDist, yDist;
+      if (!Knight.__super__.validMove.call(this, startSquare, endSquare)) {
+        return false;
+      }
+      xDist = Math.abs(endSquare.x - startSquare.x);
+      yDist = Math.abs(endSquare.y - startSquare.y);
+      return xDist === 1 && yDist === 2 || xDist === 2 && yDist === 1;
+    };
 
     return Knight;
 
@@ -157,7 +158,7 @@
       xDist = endSquare.x - startSquare.x;
       yDist = endSquare.y - startSquare.y;
       slope = xDist / yDist;
-      return Math.abs(slope);
+      return Math.abs(slope) === 1;
     };
 
     return Bishop;
@@ -172,6 +173,16 @@
       return _ref4;
     }
 
+    King.prototype.validMove = function(startSquare, endSquare) {
+      var xDist, yDist;
+      if (!King.__super__.validMove.call(this, startSquare, endSquare)) {
+        return false;
+      }
+      xDist = Math.abs(endSquare.x - startSquare.x);
+      yDist = Math.abs(endSquare.y - startSquare.y);
+      return xDist <= 1 && yDist <= 1;
+    };
+
     return King;
 
   })(Piece);
@@ -183,6 +194,25 @@
       _ref5 = Queen.__super__.constructor.apply(this, arguments);
       return _ref5;
     }
+
+    Queen.prototype.validMove = function(startSquare, endSquare) {
+      var slope, xDist, yDist;
+      if (!Queen.__super__.validMove.call(this, startSquare, endSquare)) {
+        return false;
+      }
+      xDist = endSquare.x - startSquare.x;
+      yDist = endSquare.y - startSquare.y;
+      slope = xDist / yDist;
+      if (Math.abs(slope) === 1) {
+        return true;
+      }
+      if (endSquare.x !== startSquare.x && endSquare.y === startSquare.y) {
+        return true;
+      }
+      if (endSquare.x === startSquare.x && endSquare.y !== startSquare.y) {
+        return true;
+      }
+    };
 
     return Queen;
 
