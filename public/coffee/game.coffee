@@ -21,9 +21,13 @@ startX = undefined
 startY = undefined
 endSquare = undefined
 
+# dom vars
+canvas = undefined
+
 # game vars
 board = undefined
 playerColor = undefined
+turn = 'white'
 
 # socket io vars
 serverBaseUrl = document.domain
@@ -42,6 +46,7 @@ oCanvas.domReady( ()->
 )
 
 init = () ->
+  # create socket io listeners
   socket.on 'connect', () ->
     sessionId = socket.socket.sessionid
     console.log "sessionId #{sessionId}"
@@ -49,6 +54,20 @@ init = () ->
     $.get "/game/playercolor/#{sessionId}", (resp) ->
       playerColor = resp
       console.log "player color is #{playerColor}"
+
+  socket.on 'newMove', (moveInfo) ->
+    return if moveInfo.player is sessionId
+    console.log "moveInfo"
+    console.log moveInfo
+    start = moveInfo.startSquare
+    end = moveInfo.endSquare
+    console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
+    startSquare = board[start[0]][start[1]]
+    endSquare = board[end[0]][end[1]]
+    console.log "startsquare obj"
+    console.log startSquare
+    moveSuccess startSquare.piece.displayObject, startSquare, endSquare
+
 
   ###
   socket.on 'newConnection', (data) ->
@@ -119,13 +138,13 @@ drawPieces = (canvas, board) ->
             startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
 
           end: () ->
-            that = this
             piece = startSquare.piece
 
             if not piece?
               console.log "No piece selected"
               return
 
+            that = this
             revert = () ->
               that.x = startX
               that.y = startY 
@@ -140,13 +159,46 @@ drawPieces = (canvas, board) ->
               if not isValid or isObstructed(startSquare, endSquare, board)
                 revert()
               else
-                endSquare.piece.displayObject.remove() if endSquare.piece?
-                startSquare.piece.square = endSquare
-                endSquare.piece = startSquare.piece
-                startSquare.piece = undefined
-                that.x = (that.x - that.x % squareSize) + squareSize / 2
-                that.y = (that.y - that.y % squareSize) + squareSize / 2
+                moveSuccess(that, startSquare, endSquare, true)
         })
+
+# TODO validate move serverside; check for authenticity client side
+moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
+  if not displayObj?
+    console.log "invalid displayObj: #{displayObj}"
+    return
+
+  console.log "displayobj"
+  console.log displayObj
+
+  if movedBySelf
+    sendMove(startSquare, endSquare)
+  console.log "#{startSquare.piece.text} #{startSquare.name}-#{endSquare.name}"
+  endSquare.piece.displayObject.remove() if endSquare.piece?
+  startSquare.piece.square = endSquare
+  endSquare.piece = startSquare.piece
+  startSquare.piece = undefined
+  displayObj.x = (endSquare.x * squareSize) + squareSize / 2
+  displayObj.y = (endSquare.y * squareSize) + squareSize / 2
+  ###
+  displayObj.x = (displayObj.x - displayObj.x % squareSize) + squareSize / 2
+  displayObj.y = (displayObj.y - displayObj.y % squareSize) + squareSize / 2
+  ###
+  canvas.redraw()
+
+
+sendMove = (startSquare, endSquare) ->
+  pieceName = startSquare.piece?.text
+  if not pieceName?
+    console.log "Cannot send move if start square is empty"
+    return
+  moveInfo =
+    player: sessionId
+    piece: pieceName
+    startSquare: [startSquare.x, startSquare.y]
+    endSquare: [endSquare.x, endSquare.y]
+  socket.emit('newMove', moveInfo)
+
 
 drawBoard = (canvas) ->
   createRectangle = (x, y, color) ->

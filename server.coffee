@@ -53,9 +53,15 @@ io.on "connection", (socket) ->
     participants[data.id] = name: data.name, color: playerColor
     #io.sockets.emit "newConnection", {participants: participants}
 
+  socket.on "newMove", (data) ->
+    # TODO validate move
+    io.sockets.emit "newMove", data
+
+###
 io.on "disconnect", () ->
   participants = _.without(participants, _.findWhere(participants, {id: socket.id}))
   io.sockets.emit "userDisconnected", {id: socket.id, sender: "system"}
+###
 
 # Start server
 http.listen app.get("port"), app.get("ipaddr"), () ->
