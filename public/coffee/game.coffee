@@ -188,8 +188,17 @@ moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   displayObj.x = (displayObj.x - displayObj.x % squareSize) + squareSize / 2
   displayObj.y = (displayObj.y - displayObj.y % squareSize) + squareSize / 2
   ###
-  whitesTurn = not whitesTurn
+  toggleTurn()
   canvas.redraw()
+
+toggleTurn = () ->
+  whitesTurn = not whitesTurn
+  if whitesTurn
+    $('#turn-label').text "White's turn"
+  else
+    $('#turn-label').text "Black's turn"
+
+
 
 
 sendMove = (startSquare, endSquare) ->
