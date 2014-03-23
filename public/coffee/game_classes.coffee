@@ -3,8 +3,8 @@ window.Game = window.Game or {}
 # TODO: game controller class
 
 window.Square = class Square
-  constructor: (@name, @row, @col, @piece) ->
-
+  constructor: (@name, @row, @col, @piece, @x, @y) ->
+    @threat = []
   movePiece: (otherSquare) ->
     # return false if no piece on this square
     return false unless @piece?
@@ -33,6 +33,9 @@ window.Piece = class Piece
     # cannot move on to square containing own piece
     return false if endSquare.piece? and endSquare.piece.color == @color
     return true
+
+  getThreatenedSquares: (board) ->
+    return []
 
   toString: () ->
     return "#{@color} #{@text}"
@@ -70,6 +73,22 @@ window.Pawn = class Pawn extends Piece
     # TODO case 4: en passant
 
     return false
+
+  getThreatenedSquares: (board, x, y) ->
+    sqs = []
+    dir = 1     # 1 for moving "up" board from 1 to 8, -1 for moving "down" board from 8 to 1
+    if @color == "black"
+      dir = -1
+
+    # left diagonal
+    if x > 0 and not board[x - 1][y + dir].piece?
+      sqs.push board[x - 1][y + dir]
+    # right diagonal
+    if x < 7 and not board[x - 1][y + dir].piece?
+      sqs.push board[x + 1][y + dir]
+
+    return sqs
+
 
 window.Rook = class Rook extends Piece
   validMove: (startSquare, endSquare) ->

@@ -7,11 +7,14 @@
   window.Game = window.Game || {};
 
   window.Square = Square = (function() {
-    function Square(name, row, col, piece) {
+    function Square(name, row, col, piece, x, y) {
       this.name = name;
       this.row = row;
       this.col = col;
       this.piece = piece;
+      this.x = x;
+      this.y = y;
+      this.threat = [];
     }
 
     Square.prototype.movePiece = function(otherSquare) {
@@ -56,6 +59,10 @@
       return true;
     };
 
+    Piece.prototype.getThreatenedSquares = function(board) {
+      return [];
+    };
+
     Piece.prototype.toString = function() {
       return "" + this.color + " " + this.text;
     };
@@ -95,6 +102,22 @@
         return true;
       }
       return false;
+    };
+
+    Pawn.prototype.getThreatenedSquares = function(board, x, y) {
+      var dir, sqs;
+      sqs = [];
+      dir = 1;
+      if (this.color === "black") {
+        dir = -1;
+      }
+      if (x > 0 && (board[x - 1][y + dir].piece == null)) {
+        sqs.push(board[x - 1][y + dir]);
+      }
+      if (x < 7 && (board[x - 1][y + dir].piece == null)) {
+        sqs.push(board[x + 1][y + dir]);
+      }
+      return sqs;
     };
 
     return Pawn;

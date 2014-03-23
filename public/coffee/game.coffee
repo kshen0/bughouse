@@ -2,8 +2,10 @@ window.Game = window.Game or {}
 
 # constants
 squareSize = 70
-dark = "#34495e"
-light = "#95a5a6"
+COLORS =
+  red: "#e74c3c"
+  dark: "#34495e"
+  light: "#95a5a6"
 
 # allows array indexing by square coordinates
 A = 7
@@ -21,8 +23,9 @@ startX = undefined
 startY = undefined
 endSquare = undefined
 
-# dom vars
+# cavnas and dom vars
 canvas = undefined
+boardSquares = []
 
 # game vars
 board = undefined
@@ -36,12 +39,12 @@ sessionId = ''
 
 oCanvas.domReady( ()->
   init()
-  board = createBoard()
 
-  canvas = oCanvas.create {canvas: "#board", background: dark}
+  canvas = oCanvas.create {canvas: "#board", background: COLORS.dark}
   canvas.height = 8 * squareSize;
   canvas.width = 8 * squareSize; 
-  drawBoard(canvas)
+  board = createBoard(canvas)
+  #drawBoard(canvas)
   drawPieces(canvas, board)
 )
 
@@ -76,7 +79,7 @@ init = () ->
 
 
 
-createBoard = () ->
+createBoard = (canvas) ->
   # letters A - H
   letters = (String.fromCharCode(letter) for letter in [72..65])
   board = ((new window.Square("#{letter}#{num}", num, letter) for num in [1..8]) for letter in letters)
@@ -117,7 +120,25 @@ createBoard = () ->
   board[D][0].piece = new window.Queen("white", "queen")
   board[D][7].piece = new window.Queen("black", "queen")
 
+
+  # couple each board square with a canvas object
+  for x in [0..7]
+    for y in [0..7]
+      board[x][y].graphic = createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then COLORS.light else COLORS.dark)
+
   return board
+
+# create canvas squares
+createRectangle = (x, y, color) ->
+  rectangle = canvas.display.rectangle( {
+    x: x,
+    y: y,
+    width: squareSize; 
+    height: squareSize; 
+    fill: color; 
+  })
+  canvas.addChild(rectangle)
+  return rectangle
 
 drawPieces = (canvas, board) ->
   for x in [0..7]
@@ -131,10 +152,19 @@ drawPieces = (canvas, board) ->
         })
         board[x][y].piece.displayObject = img
         canvas.addChild(img)
+
+        # define hover behavior
+        img.bind "mouseenter", () ->
+          setSquareColorForImg this, COLORS.red
+          canvas.redraw()
+        img.bind "mouseleave", () ->
+          setSquareColorForImg this
+          canvas.redraw()
+
+
+        # define drag and drop behavior
         img.dragAndDrop( {
           start: () ->
-            startX = this.x
-            startY = this.y
             startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
 
           end: () ->
@@ -166,6 +196,17 @@ drawPieces = (canvas, board) ->
               else
                 moveSuccess(that, startSquare, endSquare, true) })
 
+# given an oCanvas image object, set the color of its square
+setSquareColorForImg = (img, color) ->
+  x = Math.floor(img.x / squareSize)
+  y = Math.floor(img.y / squareSize)
+  square = board[x][y]
+  piece = square.piece
+  threatenedSqs = piece.getThreatenedSquares(board, x, y)
+  for sq in threatenedSqs
+    sq.graphic.fill = color or if (y + x) % 2 == 0 then COLORS.light else COLORS.dark
+
+
 # TODO validate move serverside; check for authenticity client side
 moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   if not displayObj?
@@ -191,6 +232,7 @@ moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   toggleTurn()
   canvas.redraw()
 
+
 toggleTurn = () ->
   whitesTurn = not whitesTurn
   if whitesTurn
@@ -198,8 +240,23 @@ toggleTurn = () ->
   else
     $('#turn-label').text "Black's turn"
 
+  # recalculate threat for all pieces and squares on the board
+  #calculateThreat()
 
+calculateThreat = () ->
+  # reset threat for each square
+  for x in [0..7]
+    for y in [0..7]
+      board[x][y].threats = []
 
+  # calculate threat for each piece
+  for x in [0..7]
+    for y in [0..7]
+      piece = board[x][y].piece
+      if piece?
+        threatenedSquares = piece.getThreatenedSquares(board)
+        for sq in threatenedSquares
+          sq.threats.push piece
 
 sendMove = (startSquare, endSquare) ->
   pieceName = startSquare.piece?.text
@@ -214,6 +271,7 @@ sendMove = (startSquare, endSquare) ->
   socket.emit('newMove', moveInfo)
 
 
+###
 drawBoard = (canvas) ->
   createRectangle = (x, y, color) ->
     rectangle = canvas.display.rectangle( {
@@ -227,8 +285,9 @@ drawBoard = (canvas) ->
 
   for x in [0..7]
     for y in [0..7]
-      createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then light else dark)
+      board[x][y].graphic = createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then light else dark)
       #console.log "#{x}, #{y}"
+###
 
 isObstructed = (startSquare, endSquare, board) ->
   # vertical rank check
