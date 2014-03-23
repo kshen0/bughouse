@@ -193,16 +193,19 @@
             });
             board[x][y].piece.displayObject = img;
             canvas.addChild(img);
-            img.bind("mouseenter", function() {
-              setSquareColorForImg(this, COLORS.red);
-              return canvas.redraw();
-            });
-            img.bind("mouseleave", function() {
-              setSquareColorForImg(this);
-              return canvas.redraw();
-            });
+            /*
+            img.bind "mouseenter", () ->
+              setSquareColorForImg this, COLORS.red
+              canvas.redraw()
+            img.bind "mouseleave", () ->
+              setSquareColorForImg this
+              canvas.redraw()
+            */
+
             _results1.push(img.dragAndDrop({
               start: function() {
+                startX = this.x;
+                startY = this.y;
                 return startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)];
               },
               end: function() {

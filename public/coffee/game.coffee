@@ -23,7 +23,7 @@ startX = undefined
 startY = undefined
 endSquare = undefined
 
-# cavnas and dom vars
+# canvas and dom vars
 canvas = undefined
 boardSquares = []
 
@@ -154,17 +154,21 @@ drawPieces = (canvas, board) ->
         canvas.addChild(img)
 
         # define hover behavior
+        ###
         img.bind "mouseenter", () ->
           setSquareColorForImg this, COLORS.red
           canvas.redraw()
         img.bind "mouseleave", () ->
           setSquareColorForImg this
           canvas.redraw()
+        ###
 
 
         # define drag and drop behavior
         img.dragAndDrop( {
           start: () ->
+            startX = this.x
+            startY = this.y
             startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
 
           end: () ->
