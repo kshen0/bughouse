@@ -22,6 +22,7 @@ startSquare = undefined
 startX = undefined
 startY = undefined
 endSquare = undefined
+dragLock = false
 
 # canvas and dom vars
 canvas = undefined
@@ -154,19 +155,20 @@ drawPieces = (canvas, board) ->
         canvas.addChild(img)
 
         # define hover behavior
-        ###
         img.bind "mouseenter", () ->
+          return undefined if dragLock
           setSquareColorForImg this, COLORS.red
           canvas.redraw()
         img.bind "mouseleave", () ->
+          return undefined if dragLock
           setSquareColorForImg this
           canvas.redraw()
-        ###
 
 
         # define drag and drop behavior
         img.dragAndDrop( {
           start: () ->
+            draggLock = true
             startX = this.x
             startY = this.y
             startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
@@ -183,13 +185,13 @@ drawPieces = (canvas, board) ->
               that.x = startX
               that.y = startY 
 
-            if (playerColor is 'white' and not whitesTurn) or (playerColor is 'black' and whitesTurn)
-              console.log "#{playerColor} cannot move when whitesTurn=#{whitesTurn}"
+            if piece.color isnt playerColor
+              console.log "Player is #{playerColor}. Can't move #{piece.color} piece."
               revert()
               return
 
-            if piece.color isnt playerColor
-              console.log "Player is #{playerColor}. Can't move #{piece.color} piece."
+            if (playerColor is 'white' and not whitesTurn) or (playerColor is 'black' and whitesTurn)
+              console.log "#{playerColor} cannot move out of turn"
               revert()
               return
 
@@ -198,7 +200,10 @@ drawPieces = (canvas, board) ->
               if not isValid or isObstructed(startSquare, endSquare, board)
                 revert()
               else
-                moveSuccess(that, startSquare, endSquare, true) })
+                moveSuccess(that, startSquare, endSquare, true)
+          })
+
+
 
 # given an oCanvas image object, set the color of its square
 setSquareColorForImg = (img, color) ->
@@ -234,6 +239,7 @@ moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   displayObj.y = (displayObj.y - displayObj.y % squareSize) + squareSize / 2
   ###
   toggleTurn()
+  dragLock = false
   canvas.redraw()
 
 
