@@ -96,6 +96,22 @@ window.Rook = class Rook extends Piece
     return false unless super(startSquare, endSquare)
     return not endSquare.x != startSquare.x and endSquare.y != startSquare.y
 
+  getThreatenedSquares: (board, x, y) ->
+    sqs = []
+
+    # check horizontal rank
+    for h in [0..7]
+      if not window.GameUtils.isObstructed board[x][y], board[h][y], board
+        console.log "rook threatens #{h}#{y}"
+        sqs.push board[h][y]
+    # check vertical rank
+    for v in [0..7]
+      if not window.GameUtils.isObstructed board[x][y], board[x][v], board
+        console.log "rook threatens #{x}#{v}"
+        sqs.push board[x][v]
+
+    return sqs
+
 window.Knight = class Knight extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking

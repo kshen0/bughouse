@@ -139,6 +139,24 @@
       return !endSquare.x !== startSquare.x && endSquare.y !== startSquare.y;
     };
 
+    Rook.prototype.getThreatenedSquares = function(board, x, y) {
+      var h, sqs, v, _i, _j;
+      sqs = [];
+      for (h = _i = 0; _i <= 7; h = ++_i) {
+        if (!window.GameUtils.isObstructed(board[x][y], board[h][y], board)) {
+          console.log("rook threatens " + h + y);
+          sqs.push(board[h][y]);
+        }
+      }
+      for (v = _j = 0; _j <= 7; v = ++_j) {
+        if (!window.GameUtils.isObstructed(board[x][y], board[x][v], board)) {
+          console.log("rook threatens " + x + v);
+          sqs.push(board[x][v]);
+        }
+      }
+      return sqs;
+    };
+
     return Rook;
 
   })(Piece);
