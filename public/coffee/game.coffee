@@ -169,6 +169,7 @@ drawPieces = (canvas, board) ->
         img.dragAndDrop( {
           start: () ->
             draggLock = true
+            resetBoardColor()
             startX = this.x
             startY = this.y
             startSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
@@ -204,6 +205,14 @@ drawPieces = (canvas, board) ->
           })
 
 
+resetBoardColor = () ->
+  for y in [0..7]
+    for x in [0..7]
+      if (y + x) % 2 == 0
+        board[x][y].graphic.fill = COLORS.light
+      else
+        board[x][y].graphic.fill = COLORS.dark
+
 
 # given an oCanvas image object, set the color of its square
 setSquareColorForImg = (img, color) ->
@@ -211,6 +220,7 @@ setSquareColorForImg = (img, color) ->
   y = Math.floor(img.y / squareSize)
   square = board[x][y]
   piece = square.piece
+  return unless piece?
   threatenedSqs = piece.getThreatenedSquares(board, x, y)
   for sq in threatenedSqs
     sq.graphic.fill = color or if (y + x) % 2 == 0 then COLORS.light else COLORS.dark
