@@ -215,26 +215,31 @@ window.Queen = class Queen extends Piece
 getStraightThreat = (board, x, y) ->
   threatenedSqs = []
   # check left
-  for col in [Math.max(x-1, 0) .. 0]
+  for col in [x-1 .. 0]
+    break if col is -1
     if board[col][y].piece?
       threatenedSqs.push board[col][y] 
       break
     threatenedSqs.push board[col][y]
   # check right
-  for col in [Math.min(x+1, 7) .. 7]
+  for col in [x+1 .. 7]
+    break if col is 8
     if board[col][y].piece?
       threatenedSqs.push board[col][y] 
       break
     threatenedSqs.push board[col][y]
 
   # up and down
-  for row in [Math.max(y-1, 0) .. 0]
+  #for row in [Math.max(y-1, 0) .. 0]
+  for row in [y-1 .. 0]
+    break if row is -1
     if board[x][row].piece?
       threatenedSqs.push board[x][row]
       break
     threatenedSqs.push board[x][row]
 
-  for row in [Math.min(y+1, 7) .. 7]
+  for row in [y+1 .. 7]
+    break if row is 8
     if board[x][row].piece?
       threatenedSqs.push board[x][row]
       break

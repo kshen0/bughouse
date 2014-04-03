@@ -117,7 +117,6 @@ class ChessGame
     board[@G][0].piece = new window.Knight("white", "knight")
     board[@B][7].piece = new window.Knight("black", "knight")
     board[@G][7].piece = new window.Knight("black", "knight")
-
     # Bishops
     board[@C][0].piece = new window.Bishop("white", "bishop")
     board[@F][0].piece = new window.Bishop("white", "bishop")
@@ -196,7 +195,7 @@ class ChessGame
 
     @endSquare = @board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)]
     piece.move @startSquare, @endSquare, (isValid) =>
-      if not isValid or isObstructed(@startSquare, @endSquare, @board)
+      if not isValid or @isObstructed(@startSquare, @endSquare, @board)
         revert()
       else if @check
         if not @isCheckRemoved(@startSquare, @endSquare)
@@ -307,6 +306,7 @@ class ChessGame
 
   # TODO validate move serverside; check for authenticity client side
   moveSuccess: (displayObj, startSquare, endSquare, movedBySelf) =>
+    console.log "moveSuccess function"
     if not displayObj?
       console.log "invalid displayObj: #{displayObj}"
       return
@@ -314,15 +314,18 @@ class ChessGame
     if movedBySelf
       @sendMove(startSquare, endSquare)
     console.log "#{startSquare.piece.text} #{startSquare.name}-#{endSquare.name}"
+    console.log endSquare
     endSquare.piece.displayObject.remove() if endSquare.piece?
     startSquare.piece.square = endSquare
     endSquare.piece = startSquare.piece
     startSquare.piece = undefined
     displayObj.x = (endSquare.x * squareSize) + squareSize / 2
     displayObj.y = (endSquare.y * squareSize) + squareSize / 2
-    @toggleTurn()
     @dragLock = false
     @canvas.redraw()
+    console.log "move committed"
+    console.log endSquare
+    @toggleTurn()
 
 
   toggleTurn: () ->
@@ -343,8 +346,8 @@ class ChessGame
       console.log "player is not in check to begin with!"
       return false
 
-    console.log "recalculating check"
     # temporarily change board to assess check
+    endSqPiece = @endSquare.piece
     @startSquare.piece.square = @endSquare
     @endSquare.piece = @startSquare.piece
     @startSquare.piece = undefined
@@ -354,10 +357,8 @@ class ChessGame
     # reset from temporary position
     @endSquare.piece.square = @startSquare
     @startSquare.piece = @endSquare.piece
-    @endSquare.piece = undefined
+    @endSquare.piece = endSqPiece
     @calculateThreat()
-
-    console.log "check reevaluation = #{newCheck}"
 
     return newCheck is false
 
@@ -430,7 +431,7 @@ class ChessGame
         #console.log "#{x}, #{y}"
   ###
 
-  isObstructed = (startSquare, endSquare, board) ->
+  isObstructed: (startSquare, endSquare, board) =>
     # vertical rank check
     if endSquare.x == startSquare.x
       # check in direction from lowest to highest row number
@@ -441,7 +442,7 @@ class ChessGame
       return false if j - i < 0 
 
       for row in [i..j]
-        return true if board[startSquare.x][row].piece?
+        return true if @board[startSquare.x][row].piece?
 
     # horizontal rank check
     if endSquare.y == startSquare.y
@@ -453,7 +454,7 @@ class ChessGame
       return false if j - i < 0 
 
       for col in [i..j]
-        return true if board[col][startSquare.y].piece?
+        return true if @board[col][startSquare.y].piece?
 
     # diagonal obstruction check
     xDist = endSquare.x - startSquare.x
@@ -466,7 +467,7 @@ class ChessGame
       xRange = ([startSquare.x .. endSquare.x])[1...-1]
       yRange = ([startSquare.y .. endSquare.y])[1...-1]
       for i in [0...xRange.length]
-        return true if board[xRange[i]][yRange[i]].piece?
+        return true if @board[xRange[i]][yRange[i]].piece?
 
     return false
 

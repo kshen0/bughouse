@@ -76,12 +76,11 @@
   };
 
   ChessGame = (function() {
-    var isObstructed;
-
     function ChessGame(canvas, playerColor, gameId) {
       this.canvas = canvas;
       this.playerColor = playerColor;
       this.gameId = gameId;
+      this.isObstructed = __bind(this.isObstructed, this);
       this.sendMove = __bind(this.sendMove, this);
       this.calculateThreat = __bind(this.calculateThreat, this);
       this.moveSuccess = __bind(this.moveSuccess, this);
@@ -183,7 +182,6 @@
       board[@G][0].piece = new window.Knight("white", "knight")
       board[@B][7].piece = new window.Knight("black", "knight")
       board[@G][7].piece = new window.Knight("black", "knight")
-      
       # Bishops
       board[@C][0].piece = new window.Bishop("white", "bishop")
       board[@F][0].piece = new window.Bishop("white", "bishop")
@@ -267,7 +265,7 @@
       this.endSquare = this.board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)];
       return piece.move(this.startSquare, this.endSquare, function(isValid) {
         var colorturn;
-        if (!isValid || isObstructed(_this.startSquare, _this.endSquare, _this.board)) {
+        if (!isValid || _this.isObstructed(_this.startSquare, _this.endSquare, _this.board)) {
           return revert();
         } else if (_this.check) {
           if (!_this.isCheckRemoved(_this.startSquare, _this.endSquare)) {
@@ -415,6 +413,7 @@
     };
 
     ChessGame.prototype.moveSuccess = function(displayObj, startSquare, endSquare, movedBySelf) {
+      console.log("moveSuccess function");
       if (displayObj == null) {
         console.log("invalid displayObj: " + displayObj);
         return;
@@ -423,6 +422,7 @@
         this.sendMove(startSquare, endSquare);
       }
       console.log("" + startSquare.piece.text + " " + startSquare.name + "-" + endSquare.name);
+      console.log(endSquare);
       if (endSquare.piece != null) {
         endSquare.piece.displayObject.remove();
       }
@@ -431,9 +431,11 @@
       startSquare.piece = void 0;
       displayObj.x = (endSquare.x * squareSize) + squareSize / 2;
       displayObj.y = (endSquare.y * squareSize) + squareSize / 2;
-      this.toggleTurn();
       this.dragLock = false;
-      return this.canvas.redraw();
+      this.canvas.redraw();
+      console.log("move committed");
+      console.log(endSquare);
+      return this.toggleTurn();
     };
 
     ChessGame.prototype.toggleTurn = function() {
@@ -449,12 +451,12 @@
     };
 
     ChessGame.prototype.isCheckRemoved = function() {
-      var newCheck;
+      var endSqPiece, newCheck;
       if (!this.check) {
         console.log("player is not in check to begin with!");
         return false;
       }
-      console.log("recalculating check");
+      endSqPiece = this.endSquare.piece;
       this.startSquare.piece.square = this.endSquare;
       this.endSquare.piece = this.startSquare.piece;
       this.startSquare.piece = void 0;
@@ -462,9 +464,8 @@
       newCheck = this.checkForCheck();
       this.endSquare.piece.square = this.startSquare;
       this.startSquare.piece = this.endSquare.piece;
-      this.endSquare.piece = void 0;
+      this.endSquare.piece = endSqPiece;
       this.calculateThreat();
-      console.log("check reevaluation = " + newCheck);
       return newCheck === false;
     };
 
@@ -578,7 +579,7 @@
     */
 
 
-    isObstructed = function(startSquare, endSquare, board) {
+    ChessGame.prototype.isObstructed = function(startSquare, endSquare, board) {
       var col, i, j, row, slope, xDist, xRange, yDist, yRange, _i, _j, _k, _l, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results, _results1;
       if (endSquare.x === startSquare.x) {
         i = Math.min(startSquare.y, endSquare.y) + 1;
@@ -587,7 +588,7 @@
           return false;
         }
         for (row = _i = i; i <= j ? _i <= j : _i >= j; row = i <= j ? ++_i : --_i) {
-          if (board[startSquare.x][row].piece != null) {
+          if (this.board[startSquare.x][row].piece != null) {
             return true;
           }
         }
@@ -599,7 +600,7 @@
           return false;
         }
         for (col = _j = i; i <= j ? _j <= j : _j >= j; col = i <= j ? ++_j : --_j) {
-          if (board[col][startSquare.y].piece != null) {
+          if (this.board[col][startSquare.y].piece != null) {
             return true;
           }
         }
@@ -619,7 +620,7 @@
           return _results1;
         }).apply(this).slice(1, -1);
         for (i = _m = 0, _ref4 = xRange.length; 0 <= _ref4 ? _m < _ref4 : _m > _ref4; i = 0 <= _ref4 ? ++_m : --_m) {
-          if (board[xRange[i]][yRange[i]].piece != null) {
+          if (this.board[xRange[i]][yRange[i]].piece != null) {
             return true;
           }
         }

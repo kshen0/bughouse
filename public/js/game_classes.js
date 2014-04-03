@@ -343,28 +343,40 @@
   getStraightThreat = function(board, x, y) {
     var col, row, threatenedSqs, _i, _j, _k, _l, _ref6, _ref7, _ref8, _ref9;
     threatenedSqs = [];
-    for (col = _i = _ref6 = Math.max(x - 1, 0); _ref6 <= 0 ? _i <= 0 : _i >= 0; col = _ref6 <= 0 ? ++_i : --_i) {
+    for (col = _i = _ref6 = x - 1; _ref6 <= 0 ? _i <= 0 : _i >= 0; col = _ref6 <= 0 ? ++_i : --_i) {
+      if (col === -1) {
+        break;
+      }
       if (board[col][y].piece != null) {
         threatenedSqs.push(board[col][y]);
         break;
       }
       threatenedSqs.push(board[col][y]);
     }
-    for (col = _j = _ref7 = Math.min(x + 1, 7); _ref7 <= 7 ? _j <= 7 : _j >= 7; col = _ref7 <= 7 ? ++_j : --_j) {
+    for (col = _j = _ref7 = x + 1; _ref7 <= 7 ? _j <= 7 : _j >= 7; col = _ref7 <= 7 ? ++_j : --_j) {
+      if (col === 8) {
+        break;
+      }
       if (board[col][y].piece != null) {
         threatenedSqs.push(board[col][y]);
         break;
       }
       threatenedSqs.push(board[col][y]);
     }
-    for (row = _k = _ref8 = Math.max(y - 1, 0); _ref8 <= 0 ? _k <= 0 : _k >= 0; row = _ref8 <= 0 ? ++_k : --_k) {
+    for (row = _k = _ref8 = y - 1; _ref8 <= 0 ? _k <= 0 : _k >= 0; row = _ref8 <= 0 ? ++_k : --_k) {
+      if (row === -1) {
+        break;
+      }
       if (board[x][row].piece != null) {
         threatenedSqs.push(board[x][row]);
         break;
       }
       threatenedSqs.push(board[x][row]);
     }
-    for (row = _l = _ref9 = Math.min(y + 1, 7); _ref9 <= 7 ? _l <= 7 : _l >= 7; row = _ref9 <= 7 ? ++_l : --_l) {
+    for (row = _l = _ref9 = y + 1; _ref9 <= 7 ? _l <= 7 : _l >= 7; row = _ref9 <= 7 ? ++_l : --_l) {
+      if (row === 8) {
+        break;
+      }
       if (board[x][row].piece != null) {
         threatenedSqs.push(board[x][row]);
         break;
