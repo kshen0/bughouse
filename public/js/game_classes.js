@@ -35,6 +35,7 @@
       this.color = color;
       this.text = text;
       this.graphic = "img/" + text + "_" + color + ".png";
+      this.name = "" + this.color + " " + this.text;
     }
 
     Piece.prototype.move = function(startSquare, endSquare, cb) {
@@ -111,10 +112,10 @@
       if (this.color === "black") {
         dir = -1;
       }
-      if (x > 0 && (board[x - 1][y + dir].piece == null)) {
+      if (x > 0) {
         sqs.push(board[x - 1][y + dir]);
       }
-      if (x < 7 && (board[x - 1][y + dir].piece == null)) {
+      if (x < 7) {
         sqs.push(board[x + 1][y + dir]);
       }
       return sqs;
@@ -165,6 +166,45 @@
       return xDist === 1 && yDist === 2 || xDist === 2 && yDist === 1;
     };
 
+    Knight.prototype.getThreatenedSquares = function(board, x, y) {
+      var coord, coords, sqs, _i, _len;
+      coords = [
+        {
+          x: x - 1,
+          y: y - 2
+        }, {
+          x: x + 1,
+          y: y - 2
+        }, {
+          x: x + 2,
+          y: y - 1
+        }, {
+          x: x + 2,
+          y: y + 1
+        }, {
+          x: x + 1,
+          y: y + 2
+        }, {
+          x: x - 1,
+          y: y + 2
+        }, {
+          x: x - 2,
+          y: y + 1
+        }, {
+          x: x - 2,
+          y: y - 1
+        }
+      ];
+      sqs = [];
+      for (_i = 0, _len = coords.length; _i < _len; _i++) {
+        coord = coords[_i];
+        if (coord.x >= 0 && coord.y >= 0 && coord.x < 8 && coord.y < 8) {
+          sqs.push(board[coord.x][coord.y]);
+        }
+      }
+      return sqs;
+    };
+
     return Knight;
 
   })(Piece);
@@ -205,13 +245,60 @@
     }
 
     King.prototype.validMove = function(startSquare, endSquare) {
-      var xDist, yDist;
+      var piece, threats, xDist, yDist, _i, _len;
       if (!King.__super__.validMove.call(this, startSquare, endSquare)) {
         return false;
+      }
+      threats = endSquare.threats || [];
+      for (_i = 0, _len = threats.length; _i < _len; _i++) {
+        piece = threats[_i];
+        if (piece.color !== this.color) {
+          console.log("can't move king on to threatened square");
+          return false;
+        }
       }
       xDist = Math.abs(endSquare.x - startSquare.x);
       yDist = Math.abs(endSquare.y - startSquare.y);
       return xDist <= 1 && yDist <= 1;
+    };
+
+    King.prototype.getThreatenedSquares = function(board, x, y) {
+      var coord, coords, sqs, _i, _len;
+      coords = [
+        {
+          x: x - 1,
+          y: y - 1
+        }, {
+          x: x,
+          y: y - 1
+        }, {
+          x: x + 1,
+          y: y - 1
+        }, {
+          x: x + 1,
+          y: y
+        }, {
+          x: x + 1,
+          y: y + 1
+        }, {
+          x: x,
+          y: y + 1
+        }, {
+          x: x - 1,
+          y: y + 1
+        }, {
+          x: x - 1,
+          y: y
+        }
+      ];
+      sqs = [];
+      for (_i = 0, _len = coords.length; _i < _len; _i++) {
+        coord = coords[_i];
+        if (coord.x >= 0 && coord.y >= 0 && coord.x < 8 && coord.y < 8) {
+          sqs.push(board[coord.x][coord.y]);
+        }
+      }
+      return sqs;
     };
 
     return King;
@@ -245,6 +332,10 @@
       }
     };
 
+    Queen.prototype.getThreatenedSquares = function(board, x, y) {
+      return getStraightThreat(board, x, y).concat(getDiagonalThreat(board, x, y));
+    };
+
     return Queen;
 
   })(Piece);
@@ -254,24 +345,28 @@
     threatenedSqs = [];
     for (col = _i = _ref6 = Math.max(x - 1, 0); _ref6 <= 0 ? _i <= 0 : _i >= 0; col = _ref6 <= 0 ? ++_i : --_i) {
       if (board[col][y].piece != null) {
+        threatenedSqs.push(board[col][y]);
         break;
       }
       threatenedSqs.push(board[col][y]);
     }
     for (col = _j = _ref7 = Math.min(x + 1, 7); _ref7 <= 7 ? _j <= 7 : _j >= 7; col = _ref7 <= 7 ? ++_j : --_j) {
       if (board[col][y].piece != null) {
+        threatenedSqs.push(board[col][y]);
         break;
       }
       threatenedSqs.push(board[col][y]);
     }
     for (row = _k = _ref8 = Math.max(y - 1, 0); _ref8 <= 0 ? _k <= 0 : _k >= 0; row = _ref8 <= 0 ? ++_k : --_k) {
       if (board[x][row].piece != null) {
+        threatenedSqs.push(board[x][row]);
         break;
       }
       threatenedSqs.push(board[x][row]);
     }
     for (row = _l = _ref9 = Math.min(y + 1, 7); _ref9 <= 7 ? _l <= 7 : _l >= 7; row = _ref9 <= 7 ? ++_l : --_l) {
       if (board[x][row].piece != null) {
+        threatenedSqs.push(board[x][row]);
         break;
       }
       threatenedSqs.push(board[x][row]);
@@ -286,6 +381,7 @@
     col = x - 1;
     while (row >= 0 && col >= 0) {
       if (board[col][row].piece != null) {
+        threatenedSqs.push(board[col][row]);
         break;
       }
       threatenedSqs.push(board[col][row]);
@@ -296,6 +392,7 @@
     col = x + 1;
     while (row >= 0 && col < 8) {
       if (board[col][row].piece != null) {
+        threatenedSqs.push(board[col][row]);
         break;
       }
       threatenedSqs.push(board[col][row]);
@@ -306,6 +403,7 @@
     col = x + 1;
     while (row < 8 && col < 8) {
       if (board[col][row].piece != null) {
+        threatenedSqs.push(board[col][row]);
         break;
       }
       threatenedSqs.push(board[col][row]);
@@ -316,6 +414,7 @@
     col = x - 1;
     while (row < 8 && col >= 0) {
       if (board[col][row].piece != null) {
+        threatenedSqs.push(board[col][row]);
         break;
       }
       threatenedSqs.push(board[col][row]);

@@ -23,6 +23,7 @@ startX = undefined
 startY = undefined
 endSquare = undefined
 dragLock = false
+check = false
 
 # canvas and dom vars
 canvas = undefined
@@ -106,7 +107,6 @@ createBoard = (canvas) ->
   board[B][7].piece = new window.Knight("black", "knight")
   board[G][7].piece = new window.Knight("black", "knight")
 
-  ###
   # Bishops
   board[C][0].piece = new window.Bishop("white", "bishop")
   board[F][0].piece = new window.Bishop("white", "bishop")
@@ -121,7 +121,6 @@ createBoard = (canvas) ->
   # Queens 
   board[D][0].piece = new window.Queen("white", "queen")
   board[D][7].piece = new window.Queen("black", "queen")
-  ###
 
 
   # couple each board square with a canvas object
@@ -129,6 +128,7 @@ createBoard = (canvas) ->
     for y in [0..7]
       board[x][y].graphic = createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then COLORS.light else COLORS.dark)
 
+  calculateThreat()
   return board
 
 # create canvas squares
@@ -202,10 +202,17 @@ drawPieces = (canvas, board) ->
             piece.move startSquare, endSquare, (isValid) ->
               if not isValid or isObstructed(startSquare, endSquare, board)
                 revert()
+              else if check
+                if not isCheckRemoved(startSquare, endSquare)
+                  colorturn = if whitesTurn then "white" else "black"
+                  console.log "#{colorturn} is in check; must move king or block check"
+                  alert "#{colorturn} is in check; must move king or block check"
+                  revert()
+                else
+                  moveSuccess(that, startSquare, endSquare, true)
               else
                 moveSuccess(that, startSquare, endSquare, true)
           })
-
 
 resetBoardColor = () ->
   for y in [0..7]
@@ -224,17 +231,6 @@ setSquareColorForImg = (img, color) ->
   piece = square.piece
   return unless piece?
   threatenedSqs = piece.getThreatenedSquares(board, x, y)
-  #console.log "x: #{x}, y: #{y}"
-  ###
-  for sq in threatenedSqs
-    if not color?
-      console.log "#{sq.x}, #{sq.y}"
-      if (sq.y + sq.x) % 2 == 0
-        color = COLORS.light
-      else
-        color = COLORS.dark
-    sq.graphic.fill = color
-    ###
   for sq in threatenedSqs
     sq.graphic.fill = color or if (sq.y + sq.x) % 2 == 0 then COLORS.light else COLORS.dark
 
@@ -254,10 +250,6 @@ moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   startSquare.piece = undefined
   displayObj.x = (endSquare.x * squareSize) + squareSize / 2
   displayObj.y = (endSquare.y * squareSize) + squareSize / 2
-  ###
-  displayObj.x = (displayObj.x - displayObj.x % squareSize) + squareSize / 2
-  displayObj.y = (displayObj.y - displayObj.y % squareSize) + squareSize / 2
-  ###
   toggleTurn()
   dragLock = false
   canvas.redraw()
@@ -271,7 +263,55 @@ toggleTurn = () ->
     $('#turn-label').text "Black's turn"
 
   # recalculate threat for all pieces and squares on the board
-  #calculateThreat()
+  calculateThreat()
+  resetColors()
+  # check for check(mate) for the player whose turn it just became
+  check = checkForCheck()
+
+isCheckRemoved = () ->
+  if not check
+    console.log "player is not in check to begin with!"
+    return false
+
+  console.log "recalculating check"
+  # temporarily change board to assess check
+  startSquare.piece.square = endSquare
+  endSquare.piece = startSquare.piece
+  startSquare.piece = undefined
+  calculateThreat()
+  newCheck = checkForCheck()
+
+  # reset from temporary position
+  endSquare.piece.square = startSquare
+  startSquare.piece = endSquare.piece
+  endSquare.piece = undefined
+  calculateThreat()
+
+  console.log "check reevaluation = #{newCheck}"
+
+  return newCheck is false
+
+checkForCheck = () ->
+  # find king
+  kingSq = undefined
+  colorTurn = if whitesTurn then "white" else "black"
+  for x in [0..7]
+    for y in [0..7]
+      if board[x][y].piece?.name is "#{colorTurn} king"
+        kingSq = board[x][y]
+
+  for piece in kingSq.threats
+    if piece.color isnt colorTurn
+      alert "#{colorTurn} is in check!"
+      console.log "#{colorTurn} is in check"
+      return true
+
+  return false
+
+resetColors = () ->
+  for x in [0..7]
+    for y in [0..7]
+      setSquareColorForImg board[x][y].graphic
 
 calculateThreat = () ->
   # reset threat for each square
@@ -284,7 +324,7 @@ calculateThreat = () ->
     for y in [0..7]
       piece = board[x][y].piece
       if piece?
-        threatenedSquares = piece.getThreatenedSquares(board)
+        threatenedSquares = piece.getThreatenedSquares(board, x, y)
         for sq in threatenedSquares
           sq.threats.push piece
 

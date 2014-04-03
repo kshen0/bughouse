@@ -15,6 +15,7 @@ window.Square = class Square
 window.Piece = class Piece
   constructor: (@color, @text) ->
     @graphic = "img/#{text}_#{color}.png"
+    @name = "#{@color} #{@text}"
 
   move: (startSquare, endSquare, cb) ->
     if @validMove(startSquare, endSquare)
@@ -81,10 +82,12 @@ window.Pawn = class Pawn extends Piece
       dir = -1
 
     # left diagonal
-    if x > 0 and not board[x - 1][y + dir].piece?
+    #if x > 0 and not board[x - 1][y + dir].piece?
+    if x > 0
       sqs.push board[x - 1][y + dir]
     # right diagonal
-    if x < 7 and not board[x - 1][y + dir].piece?
+    #if x < 7 and not board[x + 1][y + dir].piece?
+    if x < 7
       sqs.push board[x + 1][y + dir]
 
     return sqs
@@ -110,6 +113,26 @@ window.Knight = class Knight extends Piece
 
     return xDist is 1 and yDist is 2 or xDist is 2 and yDist is 1
 
+  getThreatenedSquares: (board, x, y) ->
+    coords = [
+      {x: x-1, y: y-2}
+      {x: x+1, y: y-2}
+      {x: x+2, y: y-1}
+      {x: x+2, y: y+1}
+      {x: x+1, y: y+2}
+      {x: x-1, y: y+2}
+      {x: x-2, y: y+1}
+      {x: x-2, y: y-1}
+    ]
+    sqs = []
+    #sqs = (board[coord.x][coord.y] if coord.x >= 0 and coord.y >= 0 for coord in coords)
+    for coord in coords
+      if coord.x >=0 and coord.y >= 0 and
+      coord.x < 8 and coord.y < 8
+      #not board[coord.x][coord.y].piece?
+        sqs.push board[coord.x][coord.y]
+    return sqs
+
 window.Bishop = class Bishop extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
@@ -125,11 +148,15 @@ window.Bishop = class Bishop extends Piece
 
 window.King = class King extends Piece
   validMove: (startSquare, endSquare) ->
-    # TODO mark squares as threatened
-    # king cannot move onto threatened squares
-
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
+
+    # can't move on to threatened square
+    threats = endSquare.threats or []
+    for piece in threats
+      if piece.color isnt @color
+        console.log "can't move king on to threatened square"
+        return false
 
     xDist = Math.abs(endSquare.x - startSquare.x)
     yDist = Math.abs(endSquare.y - startSquare.y)
@@ -137,6 +164,24 @@ window.King = class King extends Piece
 
     # TODO castling
 
+  getThreatenedSquares: (board, x, y) ->
+    coords = [
+      {x: x-1, y: y-1}
+      {x: x, y: y-1}
+      {x: x+1, y: y-1}
+      {x: x+1, y: y}
+      {x: x+1, y: y+1}
+      {x: x, y: y+1}
+      {x: x-1, y: y+1}
+      {x: x-1, y: y}
+    ]
+    sqs = []
+    #sqs = (board[coord.x][coord.y] if coord.x >= 0 and coord.y >= 0 for coord in coords)
+    for coord in coords
+      if coord.x >=0 and coord.y >= 0 and
+      coord.x < 8 and coord.y < 8
+        sqs.push board[coord.x][coord.y]
+    return sqs
 
 window.Queen = class Queen extends Piece
   validMove: (startSquare, endSquare) ->
@@ -159,6 +204,9 @@ window.Queen = class Queen extends Piece
     if endSquare.x == startSquare.x and endSquare.y != startSquare.y
       return true
 
+  getThreatenedSquares: (board, x, y) ->
+    return getStraightThreat(board, x, y).concat getDiagonalThreat(board, x, y)
+
 ##############################
 ## Threat computation helper functions
 ##############################
@@ -168,20 +216,28 @@ getStraightThreat = (board, x, y) ->
   threatenedSqs = []
   # check left
   for col in [Math.max(x-1, 0) .. 0]
-    break if board[col][y].piece?
+    if board[col][y].piece?
+      threatenedSqs.push board[col][y] 
+      break
     threatenedSqs.push board[col][y]
   # check right
   for col in [Math.min(x+1, 7) .. 7]
-    break if board[col][y].piece?
+    if board[col][y].piece?
+      threatenedSqs.push board[col][y] 
+      break
     threatenedSqs.push board[col][y]
 
   # up and down
   for row in [Math.max(y-1, 0) .. 0]
-    break if board[x][row].piece?
+    if board[x][row].piece?
+      threatenedSqs.push board[x][row]
+      break
     threatenedSqs.push board[x][row]
 
   for row in [Math.min(y+1, 7) .. 7]
-    break if board[x][row].piece?
+    if board[x][row].piece?
+      threatenedSqs.push board[x][row]
+      break
     threatenedSqs.push board[x][row]
 
   return threatenedSqs
@@ -193,7 +249,10 @@ getDiagonalThreat = (board, x, y) ->
   row = y - 1
   col = x - 1
   while row >= 0 and col >= 0
-    break if board[col][row].piece?
+    if board[col][row].piece?
+      threatenedSqs.push board[col][row]
+      break
+
     threatenedSqs.push board[col][row]
     row--
     col-- 
@@ -202,7 +261,9 @@ getDiagonalThreat = (board, x, y) ->
   row = y - 1
   col = x + 1
   while row >= 0 and col < 8 
-    break if board[col][row].piece?
+    if board[col][row].piece?
+      threatenedSqs.push board[col][row]
+      break
     threatenedSqs.push board[col][row]
     row--
     col++ 
@@ -211,7 +272,9 @@ getDiagonalThreat = (board, x, y) ->
   row = y + 1
   col = x + 1
   while row < 8 and col < 8 
-    break if board[col][row].piece?
+    if board[col][row].piece?
+      threatenedSqs.push board[col][row]
+      break
     threatenedSqs.push board[col][row]
     row++
     col++ 
@@ -220,7 +283,9 @@ getDiagonalThreat = (board, x, y) ->
   row = y + 1
   col = x - 1
   while row < 8 and col >= 0
-    break if board[col][row].piece?
+    if board[col][row].piece?
+      threatenedSqs.push board[col][row]
+      break
     threatenedSqs.push board[col][row]
     row++
     col--
