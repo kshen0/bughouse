@@ -91,8 +91,6 @@
       console.log("new incoming move " + moveInfo.piece + " " + start + "-" + end);
       startSquare = board[start[0]][start[1]];
       endSquare = board[end[0]][end[1]];
-      console.log("startsquare obj");
-      console.log(startSquare);
       return moveSuccess(startSquare.piece.displayObject, startSquare, endSquare);
     });
     /*
@@ -103,7 +101,7 @@
   };
 
   createBoard = function(canvas) {
-    var col, letter, letters, num, x, y, _i, _j, _k, _l, _m;
+    var letter, letters, num, x, y, _i, _j, _k, _l;
     letters = (function() {
       var _i, _results;
       _results = [];
@@ -134,28 +132,41 @@
         board[x][y].y = y;
       }
     }
-    for (col = _k = 0; _k <= 7; col = ++_k) {
-      board[col][1].piece = new window.Pawn("white", "pawn");
-      board[col][6].piece = new window.Pawn("black", "pawn");
-    }
-    board[A][0].piece = new window.Rook("white", "rook");
-    board[H][0].piece = new window.Rook("white", "rook");
-    board[A][7].piece = new window.Rook("black", "rook");
-    board[H][7].piece = new window.Rook("black", "rook");
-    board[B][0].piece = new window.Knight("white", "knight");
-    board[G][0].piece = new window.Knight("white", "knight");
-    board[B][7].piece = new window.Knight("black", "knight");
-    board[G][7].piece = new window.Knight("black", "knight");
+    /*
+    for col in [0..7]
+      board[col][1].piece = new window.Pawn("white", "pawn")
+      board[col][6].piece = new window.Pawn("black", "pawn")
+    
+    # Rooks
+    board[A][0].piece = new window.Rook("white", "rook")
+    board[H][0].piece = new window.Rook("white", "rook")
+    board[A][7].piece = new window.Rook("black", "rook")
+    board[H][7].piece = new window.Rook("black", "rook")
+    
+    # Knights 
+    board[B][0].piece = new window.Knight("white", "knight")
+    board[G][0].piece = new window.Knight("white", "knight")
+    board[B][7].piece = new window.Knight("black", "knight")
+    board[G][7].piece = new window.Knight("black", "knight")
+    */
+
     board[C][0].piece = new window.Bishop("white", "bishop");
     board[F][0].piece = new window.Bishop("white", "bishop");
     board[C][7].piece = new window.Bishop("black", "bishop");
     board[F][7].piece = new window.Bishop("black", "bishop");
-    board[E][0].piece = new window.King("white", "king");
-    board[E][7].piece = new window.King("black", "king");
-    board[D][0].piece = new window.Queen("white", "queen");
-    board[D][7].piece = new window.Queen("black", "queen");
-    for (x = _l = 0; _l <= 7; x = ++_l) {
-      for (y = _m = 0; _m <= 7; y = ++_m) {
+    /*
+    
+    # Kings
+    board[E][0].piece = new window.King("white", "king")
+    board[E][7].piece = new window.King("black", "king")
+    
+    # Queens 
+    board[D][0].piece = new window.Queen("white", "queen")
+    board[D][7].piece = new window.Queen("black", "queen")
+    */
+
+    for (x = _k = 0; _k <= 7; x = ++_k) {
+      for (y = _l = 0; _l <= 7; y = ++_l) {
         board[x][y].graphic = createRectangle(x * squareSize, y * squareSize, (y + x) % 2 === 0 ? COLORS.light : COLORS.dark);
       }
     }
@@ -290,10 +301,21 @@
       return;
     }
     threatenedSqs = piece.getThreatenedSquares(board, x, y);
+    /*
+    for sq in threatenedSqs
+      if not color?
+        console.log "#{sq.x}, #{sq.y}"
+        if (sq.y + sq.x) % 2 == 0
+          color = COLORS.light
+        else
+          color = COLORS.dark
+      sq.graphic.fill = color
+    */
+
     _results = [];
     for (_i = 0, _len = threatenedSqs.length; _i < _len; _i++) {
       sq = threatenedSqs[_i];
-      _results.push(sq.graphic.fill = color || ((y + x) % 2 === 0 ? COLORS.light : COLORS.dark));
+      _results.push(sq.graphic.fill = color || ((sq.y + sq.x) % 2 === 0 ? COLORS.light : COLORS.dark));
     }
     return _results;
   };
@@ -303,8 +325,6 @@
       console.log("invalid displayObj: " + displayObj);
       return;
     }
-    console.log("displayobj");
-    console.log(displayObj);
     if (movedBySelf) {
       sendMove(startSquare, endSquare);
     }
@@ -426,7 +446,6 @@
       if (j - i < 0) {
         return false;
       }
-      console.log("check cols " + i + " to " + j);
       for (col = _j = i; i <= j ? _j <= j : _j >= j; col = i <= j ? ++_j : --_j) {
         if (board[col][startSquare.y].piece != null) {
           return true;
@@ -435,8 +454,6 @@
     }
     xDist = endSquare.x - startSquare.x;
     yDist = endSquare.y - startSquare.y;
-    console.log("xDist " + xDist);
-    console.log("yDist " + yDist);
     slope = xDist / yDist;
     if (Math.abs(slope) === 1 && Math.abs(xDist) > 1 && Math.abs(yDist) > 1) {
       xRange = (function() {
@@ -449,12 +466,7 @@
         for (var _l = _ref2 = startSquare.y, _ref3 = endSquare.y; _ref2 <= _ref3 ? _l <= _ref3 : _l >= _ref3; _ref2 <= _ref3 ? _l++ : _l--){ _results1.push(_l); }
         return _results1;
       }).apply(this).slice(1, -1);
-      console.log("xrange");
-      console.log(xRange);
-      console.log("yrange");
-      console.log(yRange);
       for (i = _m = 0, _ref4 = xRange.length; 0 <= _ref4 ? _m < _ref4 : _m > _ref4; i = 0 <= _ref4 ? ++_m : --_m) {
-        console.log(board[xRange[i]][yRange[i]]);
         if (board[xRange[i]][yRange[i]].piece != null) {
           return true;
         }

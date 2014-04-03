@@ -89,28 +89,16 @@ window.Pawn = class Pawn extends Piece
 
     return sqs
 
-
 window.Rook = class Rook extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
-    return not endSquare.x != startSquare.x and endSquare.y != startSquare.y
+    return not (endSquare.x != startSquare.x and endSquare.y != startSquare.y)
 
   getThreatenedSquares: (board, x, y) ->
-    sqs = []
+    return getStraightThreat(board, x, y)
 
-    # check horizontal rank
-    for h in [0..7]
-      if not window.GameUtils.isObstructed board[x][y], board[h][y], board
-        console.log "rook threatens #{h}#{y}"
-        sqs.push board[h][y]
-    # check vertical rank
-    for v in [0..7]
-      if not window.GameUtils.isObstructed board[x][y], board[x][v], board
-        console.log "rook threatens #{x}#{v}"
-        sqs.push board[x][v]
 
-    return sqs
 
 window.Knight = class Knight extends Piece
   validMove: (startSquare, endSquare) ->
@@ -131,6 +119,9 @@ window.Bishop = class Bishop extends Piece
     yDist = endSquare.y - startSquare.y
     slope = xDist / yDist
     return Math.abs(slope) is 1
+
+  getThreatenedSquares: (board, x, y) ->
+    return getDiagonalThreat(board, x, y)
 
 window.King = class King extends Piece
   validMove: (startSquare, endSquare) ->
@@ -167,3 +158,71 @@ window.Queen = class Queen extends Piece
     #vertical move
     if endSquare.x == startSquare.x and endSquare.y != startSquare.y
       return true
+
+##############################
+## Threat computation helper functions
+##############################
+
+# horizontal and vertical threat
+getStraightThreat = (board, x, y) ->
+  threatenedSqs = []
+  # check left
+  for col in [Math.max(x-1, 0) .. 0]
+    break if board[col][y].piece?
+    threatenedSqs.push board[col][y]
+  # check right
+  for col in [Math.min(x+1, 7) .. 7]
+    break if board[col][y].piece?
+    threatenedSqs.push board[col][y]
+
+  # up and down
+  for row in [Math.max(y-1, 0) .. 0]
+    break if board[x][row].piece?
+    threatenedSqs.push board[x][row]
+
+  for row in [Math.min(y+1, 7) .. 7]
+    break if board[x][row].piece?
+    threatenedSqs.push board[x][row]
+
+  return threatenedSqs
+
+getDiagonalThreat = (board, x, y) ->
+  threatenedSqs = []
+
+  # upper left check
+  row = y - 1
+  col = x - 1
+  while row >= 0 and col >= 0
+    break if board[col][row].piece?
+    threatenedSqs.push board[col][row]
+    row--
+    col-- 
+
+  # upper right check
+  row = y - 1
+  col = x + 1
+  while row >= 0 and col < 8 
+    break if board[col][row].piece?
+    threatenedSqs.push board[col][row]
+    row--
+    col++ 
+
+  # lower right check
+  row = y + 1
+  col = x + 1
+  while row < 8 and col < 8 
+    break if board[col][row].piece?
+    threatenedSqs.push board[col][row]
+    row++
+    col++ 
+
+  # lower left check
+  row = y + 1
+  col = x - 1
+  while row < 8 and col >= 0
+    break if board[col][row].piece?
+    threatenedSqs.push board[col][row]
+    row++
+    col--
+
+  return threatenedSqs

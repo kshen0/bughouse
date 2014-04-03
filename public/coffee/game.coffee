@@ -68,8 +68,6 @@ init = () ->
     console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
     startSquare = board[start[0]][start[1]]
     endSquare = board[end[0]][end[1]]
-    console.log "startsquare obj"
-    console.log startSquare
     moveSuccess startSquare.piece.displayObject, startSquare, endSquare
 
 
@@ -91,6 +89,7 @@ createBoard = (canvas) ->
 
   ## Create pieces
   # Rows of pawns
+  ###
   for col in [0..7]
     board[col][1].piece = new window.Pawn("white", "pawn")
     board[col][6].piece = new window.Pawn("black", "pawn")
@@ -107,11 +106,13 @@ createBoard = (canvas) ->
   board[B][7].piece = new window.Knight("black", "knight")
   board[G][7].piece = new window.Knight("black", "knight")
 
+  ###
   # Bishops
   board[C][0].piece = new window.Bishop("white", "bishop")
   board[F][0].piece = new window.Bishop("white", "bishop")
   board[C][7].piece = new window.Bishop("black", "bishop")
   board[F][7].piece = new window.Bishop("black", "bishop")
+  ###
 
   # Kings
   board[E][0].piece = new window.King("white", "king")
@@ -120,6 +121,7 @@ createBoard = (canvas) ->
   # Queens 
   board[D][0].piece = new window.Queen("white", "queen")
   board[D][7].piece = new window.Queen("black", "queen")
+  ###
 
 
   # couple each board square with a canvas object
@@ -222,8 +224,19 @@ setSquareColorForImg = (img, color) ->
   piece = square.piece
   return unless piece?
   threatenedSqs = piece.getThreatenedSquares(board, x, y)
+  #console.log "x: #{x}, y: #{y}"
+  ###
   for sq in threatenedSqs
-    sq.graphic.fill = color or if (y + x) % 2 == 0 then COLORS.light else COLORS.dark
+    if not color?
+      console.log "#{sq.x}, #{sq.y}"
+      if (sq.y + sq.x) % 2 == 0
+        color = COLORS.light
+      else
+        color = COLORS.dark
+    sq.graphic.fill = color
+    ###
+  for sq in threatenedSqs
+    sq.graphic.fill = color or if (sq.y + sq.x) % 2 == 0 then COLORS.light else COLORS.dark
 
 
 # TODO validate move serverside; check for authenticity client side
@@ -231,9 +244,6 @@ moveSuccess = (displayObj, startSquare, endSquare, movedBySelf) ->
   if not displayObj?
     console.log "invalid displayObj: #{displayObj}"
     return
-
-  console.log "displayobj"
-  console.log displayObj
 
   if movedBySelf
     sendMove(startSquare, endSquare)
@@ -331,15 +341,12 @@ isObstructed = (startSquare, endSquare, board) ->
     # no obstruction if square are adjacent
     return false if j - i < 0 
 
-    console.log "check cols #{i} to #{j}"
     for col in [i..j]
       return true if board[col][startSquare.y].piece?
 
   # diagonal obstruction check
   xDist = endSquare.x - startSquare.x
   yDist = endSquare.y - startSquare.y
-  console.log "xDist #{xDist}"
-  console.log "yDist #{yDist}"
   slope = xDist / yDist
   if Math.abs(slope) == 1 and Math.abs(xDist) > 1 and Math.abs(yDist) > 1
     #range = [startSquare.x + slope .. endSquare.x - slope]
@@ -347,12 +354,7 @@ isObstructed = (startSquare, endSquare, board) ->
     # parallel arrays for x, y of squares in between
     xRange = ([startSquare.x .. endSquare.x])[1...-1]
     yRange = ([startSquare.y .. endSquare.y])[1...-1]
-    console.log "xrange"
-    console.log xRange
-    console.log "yrange"
-    console.log yRange
     for i in [0...xRange.length]
-      console.log board[xRange[i]][yRange[i]]
       return true if board[xRange[i]][yRange[i]].piece?
 
   return false
