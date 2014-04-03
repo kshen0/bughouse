@@ -26,14 +26,6 @@
 
   oCanvas.domReady(function() {
     return init();
-    /*
-    canvas = oCanvas.create {canvas: "#board", background: COLORS.dark}
-    canvas.height = 8 * squareSize;
-    canvas.width = 8 * squareSize; 
-    games.one = new ChessGame(canvas)
-    games.one.drawPieces()
-    */
-
   });
 
   init = function() {
@@ -63,8 +55,6 @@
       if (moveInfo.player === sessionId) {
         return;
       }
-      console.log("moveInfo");
-      console.log(moveInfo);
       start = moveInfo.startSquare;
       end = moveInfo.endSquare;
       console.log("new incoming move " + moveInfo.piece + " " + start + "-" + end);
@@ -135,7 +125,7 @@
     ChessGame.prototype.whitesTurn = true;
 
     ChessGame.prototype.createBoard = function(canvas) {
-      var board, letter, letters, num, x, y, _i, _j, _k, _l;
+      var board, col, letter, letters, num, x, y, _i, _j, _k, _l, _m;
       letters = (function() {
         var _i, _results;
         _results = [];
@@ -166,35 +156,28 @@
           board[x][y].y = y;
         }
       }
-      /*
-      for col in [0..7]
-        board[col][1].piece = new window.Pawn("white", "pawn")
-        board[col][6].piece = new window.Pawn("black", "pawn")
-      
-      # Rooks
-      board[@A][0].piece = new window.Rook("white", "rook")
-      board[@H][0].piece = new window.Rook("white", "rook")
-      board[@A][7].piece = new window.Rook("black", "rook")
-      board[@H][7].piece = new window.Rook("black", "rook")
-      
-      # Knights 
-      board[@B][0].piece = new window.Knight("white", "knight")
-      board[@G][0].piece = new window.Knight("white", "knight")
-      board[@B][7].piece = new window.Knight("black", "knight")
-      board[@G][7].piece = new window.Knight("black", "knight")
-      # Bishops
-      board[@C][0].piece = new window.Bishop("white", "bishop")
-      board[@F][0].piece = new window.Bishop("white", "bishop")
-      board[@C][7].piece = new window.Bishop("black", "bishop")
-      board[@F][7].piece = new window.Bishop("black", "bishop")
-      */
-
+      for (col = _k = 0; _k <= 7; col = ++_k) {
+        board[col][1].piece = new window.Pawn("white", "pawn");
+        board[col][6].piece = new window.Pawn("black", "pawn");
+      }
+      board[this.A][0].piece = new window.Rook("white", "rook");
+      board[this.H][0].piece = new window.Rook("white", "rook");
+      board[this.A][7].piece = new window.Rook("black", "rook");
+      board[this.H][7].piece = new window.Rook("black", "rook");
+      board[this.B][0].piece = new window.Knight("white", "knight");
+      board[this.G][0].piece = new window.Knight("white", "knight");
+      board[this.B][7].piece = new window.Knight("black", "knight");
+      board[this.G][7].piece = new window.Knight("black", "knight");
+      board[this.C][0].piece = new window.Bishop("white", "bishop");
+      board[this.F][0].piece = new window.Bishop("white", "bishop");
+      board[this.C][7].piece = new window.Bishop("black", "bishop");
+      board[this.F][7].piece = new window.Bishop("black", "bishop");
       board[this.E][0].piece = new window.King("white", "king");
       board[this.E][7].piece = new window.King("black", "king");
       board[this.D][0].piece = new window.Queen("white", "queen");
       board[this.D][7].piece = new window.Queen("black", "queen");
-      for (x = _k = 0; _k <= 7; x = ++_k) {
-        for (y = _l = 0; _l <= 7; y = ++_l) {
+      for (x = _l = 0; _l <= 7; x = ++_l) {
+        for (y = _m = 0; _m <= 7; y = ++_m) {
           board[x][y].graphic = this.createRectangle(x * squareSize, y * squareSize, (y + x) % 2 === 0 ? COLORS.light : COLORS.dark);
         }
       }
@@ -235,7 +218,6 @@
       this.resetBoardColor();
       this.startX = piece.x;
       this.startY = piece.y;
-      console.log(piece);
       return this.startSquare = this.board[Math.floor(piece.x / squareSize)][Math.floor(piece.y / squareSize)];
     };
 
@@ -251,7 +233,6 @@
         displayObj.x = _this.startX;
         return displayObj.y = _this.startY;
       };
-      console.log("player color: " + this.playerColor);
       if (piece.color !== this.playerColor) {
         console.log("Player is " + this.playerColor + ". Can't move " + piece.color + " piece.");
         revert();
@@ -313,55 +294,9 @@
               _results1.push(img.dragAndDrop({
                 start: function() {
                   return instance.pickUpPiece(this);
-                  /*
-                  @dragLock = true
-                  @resetBoardColor()
-                  startX = this.x
-                  startY = this.y
-                  startSquare = @board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
-                  */
-
                 },
                 end: function() {
                   return instance.dropPiece(this);
-                  /*
-                  piece = startSquare.piece
-                  
-                  if not piece?
-                    console.log "No piece selected"
-                    return
-                  
-                  that = this
-                  revert = () ->
-                    that.x = startX
-                    that.y = startY 
-                  
-                  if piece.color isnt playerColor
-                    console.log "Player is #{playerColor}. Can't move #{piece.color} piece."
-                    revert()
-                    return
-                  
-                  if (playerColor is 'white' and not whitesTurn) or (playerColor is 'black' and whitesTurn)
-                    console.log "#{playerColor} cannot move out of turn"
-                    revert()
-                    return
-                  
-                  endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
-                  piece.move startSquare, endSquare, (isValid) ->
-                    if not isValid or isObstructed(startSquare, endSquare, board)
-                      revert()
-                    else if check
-                      if not isCheckRemoved(startSquare, endSquare)
-                        colorturn = if whitesTurn then "white" else "black"
-                        console.log "#{colorturn} is in check; must move king or block check"
-                        alert "#{colorturn} is in check; must move king or block check"
-                        revert()
-                      else
-                        moveSuccess(that, startSquare, endSquare, true)
-                    else
-                      moveSuccess(that, startSquare, endSquare, true)
-                  */
-
                 }
               }));
             } else {
@@ -413,7 +348,6 @@
     };
 
     ChessGame.prototype.moveSuccess = function(displayObj, startSquare, endSquare, movedBySelf) {
-      console.log("moveSuccess function");
       if (displayObj == null) {
         console.log("invalid displayObj: " + displayObj);
         return;
@@ -422,7 +356,6 @@
         this.sendMove(startSquare, endSquare);
       }
       console.log("" + startSquare.piece.text + " " + startSquare.name + "-" + endSquare.name);
-      console.log(endSquare);
       if (endSquare.piece != null) {
         endSquare.piece.displayObject.remove();
       }
@@ -433,8 +366,6 @@
       displayObj.y = (endSquare.y * squareSize) + squareSize / 2;
       this.dragLock = false;
       this.canvas.redraw();
-      console.log("move committed");
-      console.log(endSquare);
       return this.toggleTurn();
     };
 
@@ -484,7 +415,6 @@
       for (_k = 0, _len = _ref1.length; _k < _len; _k++) {
         piece = _ref1[_k];
         if (piece.color !== colorTurn) {
-          alert("" + colorTurn + " is in check!");
           console.log("" + colorTurn + " is in check");
           return true;
         }
@@ -559,25 +489,6 @@
       };
       return socket.emit('newMove', moveInfo);
     };
-
-    /*
-    drawBoard = (canvas) ->
-      createRectangle = (x, y, color) ->
-        rectangle = canvas.display.rectangle( {
-          x: x,
-          y: y,
-          width: squareSize; 
-          height: squareSize; 
-          fill: color; 
-        })
-        canvas.addChild(rectangle)
-    
-      for x in [0..7]
-        for y in [0..7]
-          board[x][y].graphic = createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then light else dark)
-          #console.log "#{x}, #{y}"
-    */
-
 
     ChessGame.prototype.isObstructed = function(startSquare, endSquare, board) {
       var col, i, j, row, slope, xDist, xRange, yDist, yRange, _i, _j, _k, _l, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results, _results1;

@@ -5,12 +5,6 @@ window.Game = window.Game or {}
 window.Square = class Square
   constructor: (@name, @row, @col, @piece, @x, @y) ->
     @threat = []
-  movePiece: (otherSquare) ->
-    # return false if no piece on this square
-    return false unless @piece?
-
-    if @piece.validMove(otherSquare) and squareIsValid(othersquare)
-      console.log 'foo'
 
 window.Piece = class Piece
   constructor: (@color, @text) ->

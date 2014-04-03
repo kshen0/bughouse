@@ -17,15 +17,6 @@
       this.threat = [];
     }
 
-    Square.prototype.movePiece = function(otherSquare) {
-      if (this.piece == null) {
-        return false;
-      }
-      if (this.piece.validMove(otherSquare) && squareIsValid(othersquare)) {
-        return console.log('foo');
-      }
-    };
-
     return Square;
 
   })();

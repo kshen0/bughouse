@@ -18,18 +18,9 @@ games =
   one: undefined
   two: undefined
 
-oCanvas.domReady( ()->
+oCanvas.domReady ()->
   init()
 
-  ###
-  canvas = oCanvas.create {canvas: "#board", background: COLORS.dark}
-  canvas.height = 8 * squareSize;
-  canvas.width = 8 * squareSize; 
-  games.one = new ChessGame(canvas)
-  games.one.drawPieces()
-  ###
-  #drawBoard(canvas)
-)
 
 init = () ->
   # create socket io listeners
@@ -48,8 +39,6 @@ init = () ->
 
   socket.on 'newMove', (moveInfo) ->
     return if moveInfo.player is sessionId
-    console.log "moveInfo"
-    console.log moveInfo
     start = moveInfo.startSquare
     end = moveInfo.endSquare
     console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
@@ -101,7 +90,6 @@ class ChessGame
 
     ## Create pieces
     # Rows of pawns
-    ###
     for col in [0..7]
       board[col][1].piece = new window.Pawn("white", "pawn")
       board[col][6].piece = new window.Pawn("black", "pawn")
@@ -117,12 +105,12 @@ class ChessGame
     board[@G][0].piece = new window.Knight("white", "knight")
     board[@B][7].piece = new window.Knight("black", "knight")
     board[@G][7].piece = new window.Knight("black", "knight")
+    
     # Bishops
     board[@C][0].piece = new window.Bishop("white", "bishop")
     board[@F][0].piece = new window.Bishop("white", "bishop")
     board[@C][7].piece = new window.Bishop("black", "bishop")
     board[@F][7].piece = new window.Bishop("black", "bishop")
-    ###
 
     # Kings
     board[@E][0].piece = new window.King("white", "king")
@@ -166,7 +154,6 @@ class ChessGame
     @resetBoardColor()
     @startX = piece.x
     @startY = piece.y
-    console.log piece
     @startSquare = @board[Math.floor(piece.x / squareSize)][Math.floor(piece.y / squareSize)]
 
   dropPiece: (displayObj, playerColor) =>
@@ -181,7 +168,6 @@ class ChessGame
       displayObj.x = @startX
       displayObj.y = @startY 
 
-    console.log "player color: #{@playerColor}"
     if piece.color isnt @playerColor
       console.log "Player is #{@playerColor}. Can't move #{piece.color} piece."
       revert()
@@ -231,57 +217,12 @@ class ChessGame
 
           # define drag and drop behavior
           instance = @
-          img.dragAndDrop( {
+          img.dragAndDrop 
             start: () ->
               instance.pickUpPiece @
-              ###
-              @dragLock = true
-              @resetBoardColor()
-              startX = this.x
-              startY = this.y
-              startSquare = @board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
-              ###
 
             end: () ->
               instance.dropPiece @
-              ###
-              piece = startSquare.piece
-
-              if not piece?
-                console.log "No piece selected"
-                return
-
-              that = this
-              revert = () ->
-                that.x = startX
-                that.y = startY 
-
-              if piece.color isnt playerColor
-                console.log "Player is #{playerColor}. Can't move #{piece.color} piece."
-                revert()
-                return
-
-              if (playerColor is 'white' and not whitesTurn) or (playerColor is 'black' and whitesTurn)
-                console.log "#{playerColor} cannot move out of turn"
-                revert()
-                return
-
-              endSquare = board[Math.floor(this.x / squareSize)][Math.floor(this.y / squareSize)]
-              piece.move startSquare, endSquare, (isValid) ->
-                if not isValid or isObstructed(startSquare, endSquare, board)
-                  revert()
-                else if check
-                  if not isCheckRemoved(startSquare, endSquare)
-                    colorturn = if whitesTurn then "white" else "black"
-                    console.log "#{colorturn} is in check; must move king or block check"
-                    alert "#{colorturn} is in check; must move king or block check"
-                    revert()
-                  else
-                    moveSuccess(that, startSquare, endSquare, true)
-                else
-                  moveSuccess(that, startSquare, endSquare, true)
-              ###
-            })
 
   resetBoardColor: () =>
     for y in [0..7]
@@ -306,7 +247,6 @@ class ChessGame
 
   # TODO validate move serverside; check for authenticity client side
   moveSuccess: (displayObj, startSquare, endSquare, movedBySelf) =>
-    console.log "moveSuccess function"
     if not displayObj?
       console.log "invalid displayObj: #{displayObj}"
       return
@@ -314,7 +254,6 @@ class ChessGame
     if movedBySelf
       @sendMove(startSquare, endSquare)
     console.log "#{startSquare.piece.text} #{startSquare.name}-#{endSquare.name}"
-    console.log endSquare
     endSquare.piece.displayObject.remove() if endSquare.piece?
     startSquare.piece.square = endSquare
     endSquare.piece = startSquare.piece
@@ -323,8 +262,6 @@ class ChessGame
     displayObj.y = (endSquare.y * squareSize) + squareSize / 2
     @dragLock = false
     @canvas.redraw()
-    console.log "move committed"
-    console.log endSquare
     @toggleTurn()
 
 
@@ -373,7 +310,6 @@ class ChessGame
 
     for piece in kingSq.threats
       if piece.color isnt colorTurn
-        alert "#{colorTurn} is in check!"
         console.log "#{colorTurn} is in check"
         return true
 
@@ -411,25 +347,6 @@ class ChessGame
       endSquare: [endSquare.x, endSquare.y]
       gameId: @gameId
     socket.emit('newMove', moveInfo)
-
-
-  ###
-  drawBoard = (canvas) ->
-    createRectangle = (x, y, color) ->
-      rectangle = canvas.display.rectangle( {
-        x: x,
-        y: y,
-        width: squareSize; 
-        height: squareSize; 
-        fill: color; 
-      })
-      canvas.addChild(rectangle)
-
-    for x in [0..7]
-      for y in [0..7]
-        board[x][y].graphic = createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then light else dark)
-        #console.log "#{x}, #{y}"
-  ###
 
   isObstructed: (startSquare, endSquare, board) =>
     # vertical rank check
