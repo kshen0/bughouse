@@ -6,13 +6,20 @@ body {
   $board-side: 560px;
   #board-container {
     //margin: 0 auto;
-    width: 1200px; 
+    width: 1500px; 
     height: $board-side; 
     .board {
-      width: $board-side;
+      width: 710px; 
       height: $board-side; 
       float: left;
       margin-right: 25px  ;
+    }
+    .pieces {
+      float: left;
+      width: 100px;
+      height: $board-side;
+      margin: 0 10px;
+      border: 1px solid #000000;
     }
   }
 

@@ -80,6 +80,7 @@ io.on "connection", (socket) ->
     piece = capture.piece
     console.log "piece captured:"
     console.log capture
+    io.sockets.emit "transferPiece", { gameId: gameId, piece: piece, color: capture.color }
 
 ###
 io.on "disconnect", () ->

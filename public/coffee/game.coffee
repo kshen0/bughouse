@@ -10,7 +10,8 @@ COLORS =
   red: "#e74c3c"
   dark: "#34495e"
   light: "#95a5a6"
-squareSize = 70
+#squareSize = 70
+squareSize = 50
 
 # global game vars
 games =
@@ -18,6 +19,7 @@ games =
   two: undefined
 
 playerGameNum = 'unknown'
+playerColor = undefined
 
 oCanvas.domReady ()->
   init()
@@ -29,9 +31,9 @@ createGames = (playerInfo) ->
   playerGameNum = playerInfo.gameNum
 
   for gameId in ['one', 'two']
-    canvas = oCanvas.create {canvas: "#board-#{gameId}", background: COLORS.dark}
+    canvas = oCanvas.create {canvas: "#board-#{gameId}", background: '#27ae60'}
     canvas.height = 8 * squareSize;
-    canvas.width = 8 * squareSize; 
+    canvas.width = 12 * squareSize; 
     games[gameId] = new ChessGame(canvas, playerColor, gameId)
 
 init = () ->
@@ -51,6 +53,13 @@ init = () ->
     startSquare = game.board[start[0]][start[1]]
     endSquare = game.board[end[0]][end[1]]
     game.moveSuccess startSquare.piece.displayObject, startSquare, endSquare
+
+  socket.on 'transferPiece', (pieceInfo) ->
+    console.log "transfer piece"
+    console.log pieceInfo
+    targetGame = if pieceInfo.gameId is 'one' then 'two' else 'one'
+    if playerColor is pieceInfo.color and playerGameNum is targetGame 
+      alert "you got a new piece: #{pieceInfo.piece}"
 
 class ChessGame
   constructor: (@canvas, @playerColor, @gameId) ->
@@ -216,6 +225,8 @@ class ChessGame
             x: x * squareSize + squareSize / 2
             y: y * squareSize + squareSize / 2
             origin: {x: "center", y: "center"}
+            height: squareSize
+            width: squareSize
             image: @board[x][y].piece.graphic
           })
           @board[x][y].piece.displayObject = img
@@ -275,7 +286,11 @@ class ChessGame
       capturedPiece.displayObject.remove()
       if movedBySelf
         # lol security
-        socket.emit('capturePiece', { gameId: @gameId, piece: capturedPiece.name })
+        socket.emit 'capturePiece', 
+          gameId: @gameId
+          piece: capturedPiece.name
+          color: capturedPiece.color
+
 
     # move piece from start square to end square
     startSquare.piece.square = endSquare
