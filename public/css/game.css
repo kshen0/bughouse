@@ -1,8 +1,10 @@
 body {
   font-family: 'Open Sans', Helvetica, sans-serif; }
   body #board-container {
-    width: 560px;
+    width: 1200px;
     height: 560px; }
-    body #board-container #board {
+    body #board-container .board {
       width: 560px;
-      height: 560px; }
+      height: 560px;
+      float: left;
+      margin-right: 25px; }

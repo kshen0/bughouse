@@ -6,11 +6,13 @@ body {
   $board-side: 560px;
   #board-container {
     //margin: 0 auto;
-    width: $board-side;
+    width: 1200px; 
     height: $board-side; 
-    #board {
+    .board {
       width: $board-side;
       height: $board-side; 
+      float: left;
+      margin-right: 25px  ;
     }
   }
 

@@ -11,16 +11,28 @@ COLORS =
   dark: "#34495e"
   light: "#95a5a6"
 squareSize = 70
-#playerColor = 'unknown'
 
 # global game vars
 games =
   one: undefined
   two: undefined
 
+playerGameNum = 'unknown'
+
 oCanvas.domReady ()->
   init()
 
+
+createGames = (playerInfo) ->
+  playerColor = playerInfo.color
+
+  playerGameNum = playerInfo.gameNum
+
+  for gameId in ['one', 'two']
+    canvas = oCanvas.create {canvas: "#board-#{gameId}", background: COLORS.dark}
+    canvas.height = 8 * squareSize;
+    canvas.width = 8 * squareSize; 
+    games[gameId] = new ChessGame(canvas, playerColor, gameId)
 
 init = () ->
   # create socket io listeners
@@ -28,14 +40,7 @@ init = () ->
     sessionId = socket.socket.sessionid
     console.log "sessionId #{sessionId}"
     socket.emit 'newUser', {id: sessionId, name: "player"}
-    $.get "/game/playercolor/#{sessionId}", (resp) ->
-      playerColor = resp
-      console.log "player color is #{playerColor}"
-      canvas = oCanvas.create {canvas: "#board", background: COLORS.dark}
-      canvas.height = 8 * squareSize;
-      canvas.width = 8 * squareSize; 
-      games.one = new ChessGame(canvas, playerColor, 'one')
-      games.one.drawPieces()
+    $.get "/game/player/info/#{sessionId}", createGames 
 
   socket.on 'newMove', (moveInfo) ->
     return if moveInfo.player is sessionId
@@ -51,6 +56,7 @@ class ChessGame
   constructor: (@canvas, @playerColor, @gameId) ->
     @board = @createBoard(@canvas)
     @calculateThreat()
+    @drawPieces()
 
   # allows array indexing by square coordinates
   A: 7
@@ -161,12 +167,19 @@ class ChessGame
 
     if not piece?
       console.log "No piece selected"
+      @dragLock = false
       return
 
-    #that = this
     revert = () =>
       displayObj.x = @startX
       displayObj.y = @startY 
+      @dragLock = false
+
+
+    if playerGameNum isnt @gameId
+      console.log "player is playing on board #{playerGameNum} and cannot move pieces on board #{@gameId}" 
+      revert()
+      return
 
     if piece.color isnt @playerColor
       console.log "Player is #{@playerColor}. Can't move #{piece.color} piece."
@@ -251,15 +264,28 @@ class ChessGame
       console.log "invalid displayObj: #{displayObj}"
       return
 
+    # move is already reflected client side, no need to repeat it
     if movedBySelf
       @sendMove(startSquare, endSquare)
     console.log "#{startSquare.piece.text} #{startSquare.name}-#{endSquare.name}"
-    endSquare.piece.displayObject.remove() if endSquare.piece?
+
+    # remember the captured piece
+    capturedPiece = endSquare.piece
+    if capturedPiece?
+      capturedPiece.displayObject.remove()
+      if movedBySelf
+        # lol security
+        socket.emit('capturePiece', { gameId: @gameId, piece: capturedPiece.name })
+
+    # move piece from start square to end square
     startSquare.piece.square = endSquare
     endSquare.piece = startSquare.piece
     startSquare.piece = undefined
+
+    # update the graphic
     displayObj.x = (endSquare.x * squareSize) + squareSize / 2
     displayObj.y = (endSquare.y * squareSize) + squareSize / 2
+
     @dragLock = false
     @canvas.redraw()
     @toggleTurn()
