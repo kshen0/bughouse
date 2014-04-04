@@ -54,18 +54,27 @@ init = () ->
     endSquare = game.board[end[0]][end[1]]
     game.moveSuccess startSquare.piece.displayObject, startSquare, endSquare
 
+  socket.on 'newDrop', (dropInfo) ->
+    return if dropInfo.player is sessionId
+    end = dropInfo.endSquare
+    console.log "new incoming drop #{dropInfo.piece} on #{end}"
+    game = games[dropInfo.gameId]
+    endSquare = game.board[end[0]][end[1]]
+    game.dropSuccess game.getUnplacedPieceIndex(dropInfo.piece), endSquare
+
   socket.on 'transferPiece', (pieceInfo) ->
     console.log "transfer piece"
     console.log pieceInfo
     targetGame = if pieceInfo.gameId is 'one' then 'two' else 'one'
-    if playerColor is pieceInfo.color and playerGameNum is targetGame 
-      alert "you got a new piece: #{pieceInfo.piece}"
+    #if playerColor is pieceInfo.color and playerGameNum is targetGame 
+    games[targetGame].addPieceToGame(pieceInfo)
 
 class ChessGame
   constructor: (@canvas, @playerColor, @gameId) ->
     @board = @createBoard(@canvas)
     @calculateThreat()
     @drawPieces()
+    @unplacedPieces = []
 
   # allows array indexing by square coordinates
   A: 7
@@ -106,34 +115,34 @@ class ChessGame
     ## Create pieces
     # Rows of pawns
     for col in [0..7]
-      board[col][1].piece = new window.Pawn("white", "pawn")
-      board[col][6].piece = new window.Pawn("black", "pawn")
+      board[col][1].piece = new window.Pawn("white", "pawn", true)
+      board[col][6].piece = new window.Pawn("black", "pawn", true)
 
     # Rooks
-    board[@A][0].piece = new window.Rook("white", "rook")
-    board[@H][0].piece = new window.Rook("white", "rook")
-    board[@A][7].piece = new window.Rook("black", "rook")
-    board[@H][7].piece = new window.Rook("black", "rook")
+    board[@A][0].piece = new window.Rook("white", "rook", true)
+    board[@H][0].piece = new window.Rook("white", "rook", true)
+    board[@A][7].piece = new window.Rook("black", "rook", true)
+    board[@H][7].piece = new window.Rook("black", "rook", true)
 
     # Knights 
-    board[@B][0].piece = new window.Knight("white", "knight")
-    board[@G][0].piece = new window.Knight("white", "knight")
-    board[@B][7].piece = new window.Knight("black", "knight")
-    board[@G][7].piece = new window.Knight("black", "knight")
+    board[@B][0].piece = new window.Knight("white", "knight", true)
+    board[@G][0].piece = new window.Knight("white", "knight", true)
+    board[@B][7].piece = new window.Knight("black", "knight", true)
+    board[@G][7].piece = new window.Knight("black", "knight", true)
     
     # Bishops
-    board[@C][0].piece = new window.Bishop("white", "bishop")
-    board[@F][0].piece = new window.Bishop("white", "bishop")
-    board[@C][7].piece = new window.Bishop("black", "bishop")
-    board[@F][7].piece = new window.Bishop("black", "bishop")
+    board[@C][0].piece = new window.Bishop("white", "bishop", true)
+    board[@F][0].piece = new window.Bishop("white", "bishop", true)
+    board[@C][7].piece = new window.Bishop("black", "bishop", true)
+    board[@F][7].piece = new window.Bishop("black", "bishop", true)
 
     # Kings
-    board[@E][0].piece = new window.King("white", "king")
-    board[@E][7].piece = new window.King("black", "king")
+    board[@E][0].piece = new window.King("white", "king", true)
+    board[@E][7].piece = new window.King("black", "king", true)
 
     # Queens 
-    board[@D][0].piece = new window.Queen("white", "queen")
-    board[@D][7].piece = new window.Queen("black", "queen")
+    board[@D][0].piece = new window.Queen("white", "queen", true)
+    board[@D][7].piece = new window.Queen("black", "queen", true)
 
 
     # couple each board square with a canvas object
@@ -164,15 +173,23 @@ class ChessGame
     @setSquareColorForImg img
     @canvas.redraw()
 
-  pickUpPiece: (piece) =>
+  pickUpPiece: (displayObj) =>
+    piece = displayObj.piece
+    if not displayObj.piece?
+      console.log "could not find a piece for this display object"
+      console.log displayObj
+      return
+
     @dragLock = true
     @resetBoardColor()
-    @startX = piece.x
-    @startY = piece.y
-    @startSquare = @board[Math.floor(piece.x / squareSize)][Math.floor(piece.y / squareSize)]
+    @startX = displayObj.x
+    @startY = displayObj.y
+    if piece.placed
+      @startSquare = @board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)]
 
   dropPiece: (displayObj, playerColor) =>
-    piece = @startSquare.piece
+    #piece = @startSquare.piece
+    piece = displayObj.piece
 
     if not piece?
       console.log "No piece selected"
@@ -183,7 +200,6 @@ class ChessGame
       displayObj.x = @startX
       displayObj.y = @startY 
       @dragLock = false
-
 
     if playerGameNum isnt @gameId
       console.log "player is playing on board #{playerGameNum} and cannot move pieces on board #{@gameId}" 
@@ -202,20 +218,42 @@ class ChessGame
       return
 
     @endSquare = @board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)]
-    piece.move @startSquare, @endSquare, (isValid) =>
-      if not isValid or @isObstructed(@startSquare, @endSquare, @board)
-        revert()
-      else if @check
-        if not @isCheckRemoved(@startSquare, @endSquare)
-          colorturn = if @whitesTurn then "white" else "black"
-          console.log "#{colorturn} is in check; must move king or block check"
-          alert "#{colorturn} is in check; must move king or block check"
+    if piece.placed
+      piece.move @startSquare, @endSquare, (isValid) =>
+        if not isValid or @isObstructed(@startSquare, @endSquare, @board)
           revert()
+        else if @check
+          if not @isCheckRemoved(@startSquare, @endSquare)
+            colorturn = if @whitesTurn then "white" else "black"
+            console.log "#{colorturn} is in check; must move king or block check"
+            alert "#{colorturn} is in check; must move king or block check"
+            revert()
+          else
+            @moveSuccess(displayObj, @startSquare, @endSquare, true)
         else
           @moveSuccess(displayObj, @startSquare, @endSquare, true)
+    else if piece.placed is false
+      if @endSquare.piece?
+        console.log "cannot place a piece on an occupied square"
+        revert()
+        return
       else
-        @moveSuccess(displayObj, @startSquare, @endSquare, true)
+        # TODO: cannot place pawn on either back rank 
+        # TODO: cannot place checkmate
+        @dropSuccess(@getUnplacedPieceIndex(piece.name), @endSquare, true)
+    else
+      console.log "unhandled piece state"
+      console.log piece
+      return
 
+  getUnplacedPieceIndex: (pieceName) =>
+    for i in [0...@unplacedPieces.length]
+      console.log "compare: "
+      console.log @unplacedPieces[i]
+      console.log " with "
+      console.log pieceName
+      if @unplacedPieces[i].name is pieceName
+        return i
 
   drawPieces: (canvas, board) =>
     for x in [0..7]
@@ -231,13 +269,14 @@ class ChessGame
           })
           @board[x][y].piece.displayObject = img
           @canvas.addChild(img)
+          img.piece = @board[x][y].piece
 
           # define hover behavior
           that = @
           img.bind "mouseenter", () ->
-            that.drawThreat @ ,that.playerColor
+            that.drawThreat @
           img.bind "mouseleave", () ->
-            that.undrawThreat @ ,that.playerColor
+            that.undrawThreat @
 
           # define drag and drop behavior
           instance = @
@@ -247,6 +286,30 @@ class ChessGame
 
             end: () ->
               instance.dropPiece @
+
+  drawUnplacedPieces: () =>
+    for piece in @unplacedPieces
+      img = @canvas.display.image({
+        x: squareSize * 8 + squareSize / 2
+        y: squareSize / 2 
+        origin: {x: "center", y: "center"}
+        height: squareSize
+        width: squareSize
+        image: piece.graphic
+      })
+      piece.displayObject = img
+      @canvas.addChild(img)
+      img.piece = piece
+
+      # define drag and drop behavior
+      instance = @
+      img.dragAndDrop 
+        start: () ->
+          instance.pickUpPiece @
+
+        end: () ->
+          instance.dropPiece @
+
 
   resetBoardColor: () =>
     for y in [0..7]
@@ -302,6 +365,40 @@ class ChessGame
     displayObj.y = (endSquare.y * squareSize) + squareSize / 2
 
     @dragLock = false
+    @canvas.redraw()
+    @toggleTurn()
+
+  dropSuccess: (index, endSquare, movedBySelf) =>
+    console.log "dropsuccess"
+
+    piece = @unplacedPieces[index]
+
+    if movedBySelf
+      @sendDrop(index, endSquare)
+    @unplacedPieces.splice index, 1
+
+    displayObj = piece.displayObject
+
+    console.log "dropping #{piece.name} at #{endSquare.name}"
+
+    # add the piece to the board 
+    endSquare.piece = piece
+    piece.square = endSquare
+    piece.placed = true 
+
+    # bind hover listener
+    that = @
+    displayObj.bind "mouseenter", () ->
+      that.drawThreat @
+    displayObj.bind "mouseleave", () ->
+      that.undrawThreat @
+
+    # update the graphic
+    displayObj.x = (endSquare.x * squareSize) + squareSize / 2
+    displayObj.y = (endSquare.y * squareSize) + squareSize / 2
+
+    @dragLock = false
+    @calculateThreat()
     @canvas.redraw()
     @toggleTurn()
 
@@ -388,6 +485,52 @@ class ChessGame
       endSquare: [endSquare.x, endSquare.y]
       gameId: @gameId
     socket.emit('newMove', moveInfo)
+
+  sendDrop: (index, endSquare) =>
+    console.log "send drop"
+    console.log "index: #{index}"
+    console.log "endsquare: #{endSquare.name}"
+    console.log @unplacedPieces
+    pieceName = @unplacedPieces[index]?.text
+    pieceColor = @unplacedPieces[index]?.color
+    if not pieceName?
+      console.log "Error finding piece to drop"
+      return
+
+    dropInfo =
+      player: sessionId
+      piece: "#{pieceColor} #{pieceName}"
+      endSquare: [endSquare.x, endSquare.y]
+      gameId: @gameId
+
+    socket.emit 'newDrop', dropInfo
+
+  addPieceToGame: (pieceInfo) =>
+    console.log "adding piece to game:"
+    console.log pieceInfo
+
+    pieceName = pieceInfo.piece
+    return unless pieceName? 
+    colorAndType = pieceName.split " "
+    return unless colorAndType.length is 2
+    color = colorAndType[0]
+    type = colorAndType[1]
+
+    if type is "pawn"
+      piece = new window.Pawn(color, type, false)
+    if type is "rook"
+      piece = new window.Pawn(color, type, false)
+    if type is "knight"
+      piece = new window.Pawn(color, type, false)
+    if type is "bishop"
+      piece = new window.Pawn(color, type, false)
+    if type is "queen"
+      piece = new window.Pawn(color, type, false)
+
+    return unless piece?
+
+    @unplacedPieces.push piece
+    @drawUnplacedPieces()
 
   isObstructed: (startSquare, endSquare, board) =>
     # vertical rank check

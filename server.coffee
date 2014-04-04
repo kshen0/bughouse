@@ -75,6 +75,22 @@ io.on "connection", (socket) ->
 
     io.sockets.emit "newMove", moveInfo
 
+  socket.on "newDrop", (moveInfo) ->
+    # TODO validate move
+    player = participants[moveInfo.player]
+    if not player?
+      console.log "invalid player id: #{moveInfo.player}"
+      return
+
+    if player.gameNum isnt moveInfo.gameId
+      console.log "player #{moveInfo.player} cannot make moves on board #{moveInfo.gameId}" 
+      return
+
+    console.log "new drop"
+    console.log moveInfo
+
+    io.sockets.emit "newDrop", moveInfo
+
   socket.on "capturePiece", (capture) ->
     gameId = capture.gameId
     piece = capture.piece

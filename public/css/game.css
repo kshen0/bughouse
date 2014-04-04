@@ -4,13 +4,13 @@ body {
     width: 1500px;
     height: 560px; }
     body #board-container .board {
-      width: 710px;
-      height: 560px;
+      width: 600px;
+      height: 400px;
       float: left;
       margin-right: 25px; }
     body #board-container .pieces {
       float: left;
-      width: 100px;
+      width: 200px;
       height: 560px;
       margin: 0 10px;
       border: 1px solid #000000; }

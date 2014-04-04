@@ -22,9 +22,10 @@
   })();
 
   window.Piece = Piece = (function() {
-    function Piece(color, text) {
+    function Piece(color, text, placed) {
       this.color = color;
       this.text = text;
+      this.placed = placed;
       this.graphic = "img/" + text + "_" + color + ".png";
       this.name = "" + this.color + " " + this.text;
     }

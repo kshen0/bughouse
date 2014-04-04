@@ -7,7 +7,7 @@ window.Square = class Square
     @threat = []
 
 window.Piece = class Piece
-  constructor: (@color, @text) ->
+  constructor: (@color, @text, @placed) ->
     @graphic = "img/#{text}_#{color}.png"
     @name = "#{@color} #{@text}"
 

@@ -9,14 +9,14 @@ body {
     width: 1500px; 
     height: $board-side; 
     .board {
-      width: 710px; 
-      height: $board-side; 
+      width: 600px; 
+      height: 400px; 
       float: left;
       margin-right: 25px  ;
     }
     .pieces {
       float: left;
-      width: 100px;
+      width: 200px;
       height: $board-side;
       margin: 0 10px;
       border: 1px solid #000000;

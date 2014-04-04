@@ -74,14 +74,23 @@
       endSquare = game.board[end[0]][end[1]];
       return game.moveSuccess(startSquare.piece.displayObject, startSquare, endSquare);
     });
+    socket.on('newDrop', function(dropInfo) {
+      var end, endSquare, game;
+      if (dropInfo.player === sessionId) {
+        return;
+      }
+      end = dropInfo.endSquare;
+      console.log("new incoming drop " + dropInfo.piece + " on " + end);
+      game = games[dropInfo.gameId];
+      endSquare = game.board[end[0]][end[1]];
+      return game.dropSuccess(game.getUnplacedPieceIndex(dropInfo.piece), endSquare);
+    });
     return socket.on('transferPiece', function(pieceInfo) {
       var targetGame;
       console.log("transfer piece");
       console.log(pieceInfo);
       targetGame = pieceInfo.gameId === 'one' ? 'two' : 'one';
-      if (playerColor === pieceInfo.color && playerGameNum === targetGame) {
-        return alert("you got a new piece: " + pieceInfo.piece);
-      }
+      return games[targetGame].addPieceToGame(pieceInfo);
     });
   };
 
@@ -91,11 +100,16 @@
       this.playerColor = playerColor;
       this.gameId = gameId;
       this.isObstructed = __bind(this.isObstructed, this);
+      this.addPieceToGame = __bind(this.addPieceToGame, this);
+      this.sendDrop = __bind(this.sendDrop, this);
       this.sendMove = __bind(this.sendMove, this);
       this.calculateThreat = __bind(this.calculateThreat, this);
+      this.dropSuccess = __bind(this.dropSuccess, this);
       this.moveSuccess = __bind(this.moveSuccess, this);
       this.resetBoardColor = __bind(this.resetBoardColor, this);
+      this.drawUnplacedPieces = __bind(this.drawUnplacedPieces, this);
       this.drawPieces = __bind(this.drawPieces, this);
+      this.getUnplacedPieceIndex = __bind(this.getUnplacedPieceIndex, this);
       this.dropPiece = __bind(this.dropPiece, this);
       this.pickUpPiece = __bind(this.pickUpPiece, this);
       this.undrawThreat = __bind(this.undrawThreat, this);
@@ -105,6 +119,7 @@
       this.board = this.createBoard(this.canvas);
       this.calculateThreat();
       this.drawPieces();
+      this.unplacedPieces = [];
     }
 
     ChessGame.prototype.A = 7;
@@ -178,25 +193,25 @@
         }
       }
       for (col = _k = 0; _k <= 7; col = ++_k) {
-        board[col][1].piece = new window.Pawn("white", "pawn");
-        board[col][6].piece = new window.Pawn("black", "pawn");
+        board[col][1].piece = new window.Pawn("white", "pawn", true);
+        board[col][6].piece = new window.Pawn("black", "pawn", true);
       }
-      board[this.A][0].piece = new window.Rook("white", "rook");
-      board[this.H][0].piece = new window.Rook("white", "rook");
-      board[this.A][7].piece = new window.Rook("black", "rook");
-      board[this.H][7].piece = new window.Rook("black", "rook");
-      board[this.B][0].piece = new window.Knight("white", "knight");
-      board[this.G][0].piece = new window.Knight("white", "knight");
-      board[this.B][7].piece = new window.Knight("black", "knight");
-      board[this.G][7].piece = new window.Knight("black", "knight");
-      board[this.C][0].piece = new window.Bishop("white", "bishop");
-      board[this.F][0].piece = new window.Bishop("white", "bishop");
-      board[this.C][7].piece = new window.Bishop("black", "bishop");
-      board[this.F][7].piece = new window.Bishop("black", "bishop");
-      board[this.E][0].piece = new window.King("white", "king");
-      board[this.E][7].piece = new window.King("black", "king");
-      board[this.D][0].piece = new window.Queen("white", "queen");
-      board[this.D][7].piece = new window.Queen("black", "queen");
+      board[this.A][0].piece = new window.Rook("white", "rook", true);
+      board[this.H][0].piece = new window.Rook("white", "rook", true);
+      board[this.A][7].piece = new window.Rook("black", "rook", true);
+      board[this.H][7].piece = new window.Rook("black", "rook", true);
+      board[this.B][0].piece = new window.Knight("white", "knight", true);
+      board[this.G][0].piece = new window.Knight("white", "knight", true);
+      board[this.B][7].piece = new window.Knight("black", "knight", true);
+      board[this.G][7].piece = new window.Knight("black", "knight", true);
+      board[this.C][0].piece = new window.Bishop("white", "bishop", true);
+      board[this.F][0].piece = new window.Bishop("white", "bishop", true);
+      board[this.C][7].piece = new window.Bishop("black", "bishop", true);
+      board[this.F][7].piece = new window.Bishop("black", "bishop", true);
+      board[this.E][0].piece = new window.King("white", "king", true);
+      board[this.E][7].piece = new window.King("black", "king", true);
+      board[this.D][0].piece = new window.Queen("white", "queen", true);
+      board[this.D][7].piece = new window.Queen("black", "queen", true);
       for (x = _l = 0; _l <= 7; x = ++_l) {
         for (y = _m = 0; _m <= 7; y = ++_m) {
           board[x][y].graphic = this.createRectangle(x * squareSize, y * squareSize, (y + x) % 2 === 0 ? COLORS.light : COLORS.dark);
@@ -234,18 +249,27 @@
       return this.canvas.redraw();
     };
 
-    ChessGame.prototype.pickUpPiece = function(piece) {
+    ChessGame.prototype.pickUpPiece = function(displayObj) {
+      var piece;
+      piece = displayObj.piece;
+      if (displayObj.piece == null) {
+        console.log("could not find a piece for this display object");
+        console.log(displayObj);
+        return;
+      }
       this.dragLock = true;
       this.resetBoardColor();
-      this.startX = piece.x;
-      this.startY = piece.y;
-      return this.startSquare = this.board[Math.floor(piece.x / squareSize)][Math.floor(piece.y / squareSize)];
+      this.startX = displayObj.x;
+      this.startY = displayObj.y;
+      if (piece.placed) {
+        return this.startSquare = this.board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)];
+      }
     };
 
     ChessGame.prototype.dropPiece = function(displayObj, playerColor) {
       var piece, revert,
         _this = this;
-      piece = this.startSquare.piece;
+      piece = displayObj.piece;
       if (piece == null) {
         console.log("No piece selected");
         this.dragLock = false;
@@ -272,23 +296,48 @@
         return;
       }
       this.endSquare = this.board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)];
-      return piece.move(this.startSquare, this.endSquare, function(isValid) {
-        var colorturn;
-        if (!isValid || _this.isObstructed(_this.startSquare, _this.endSquare, _this.board)) {
-          return revert();
-        } else if (_this.check) {
-          if (!_this.isCheckRemoved(_this.startSquare, _this.endSquare)) {
-            colorturn = _this.whitesTurn ? "white" : "black";
-            console.log("" + colorturn + " is in check; must move king or block check");
-            alert("" + colorturn + " is in check; must move king or block check");
+      if (piece.placed) {
+        return piece.move(this.startSquare, this.endSquare, function(isValid) {
+          var colorturn;
+          if (!isValid || _this.isObstructed(_this.startSquare, _this.endSquare, _this.board)) {
             return revert();
+          } else if (_this.check) {
+            if (!_this.isCheckRemoved(_this.startSquare, _this.endSquare)) {
+              colorturn = _this.whitesTurn ? "white" : "black";
+              console.log("" + colorturn + " is in check; must move king or block check");
+              alert("" + colorturn + " is in check; must move king or block check");
+              return revert();
+            } else {
+              return _this.moveSuccess(displayObj, _this.startSquare, _this.endSquare, true);
+            }
           } else {
             return _this.moveSuccess(displayObj, _this.startSquare, _this.endSquare, true);
           }
+        });
+      } else if (piece.placed === false) {
+        if (this.endSquare.piece != null) {
+          console.log("cannot place a piece on an occupied square");
+          revert();
         } else {
-          return _this.moveSuccess(displayObj, _this.startSquare, _this.endSquare, true);
+          return this.dropSuccess(this.getUnplacedPieceIndex(piece.name), this.endSquare, true);
         }
-      });
+      } else {
+        console.log("unhandled piece state");
+        console.log(piece);
+      }
+    };
+
+    ChessGame.prototype.getUnplacedPieceIndex = function(pieceName) {
+      var i, _i, _ref;
+      for (i = _i = 0, _ref = this.unplacedPieces.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+        console.log("compare: ");
+        console.log(this.unplacedPieces[i]);
+        console.log(" with ");
+        console.log(pieceName);
+        if (this.unplacedPieces[i].name === pieceName) {
+          return i;
+        }
+      }
     };
 
     ChessGame.prototype.drawPieces = function(canvas, board) {
@@ -313,12 +362,13 @@
               });
               this.board[x][y].piece.displayObject = img;
               this.canvas.addChild(img);
+              img.piece = this.board[x][y].piece;
               that = this;
               img.bind("mouseenter", function() {
-                return that.drawThreat(this, that.playerColor);
+                return that.drawThreat(this);
               });
               img.bind("mouseleave", function() {
-                return that.undrawThreat(this, that.playerColor);
+                return that.undrawThreat(this);
               });
               instance = this;
               _results1.push(img.dragAndDrop({
@@ -335,6 +385,39 @@
           }
           return _results1;
         }).call(this));
+      }
+      return _results;
+    };
+
+    ChessGame.prototype.drawUnplacedPieces = function() {
+      var img, instance, piece, _i, _len, _ref, _results;
+      _ref = this.unplacedPieces;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        piece = _ref[_i];
+        img = this.canvas.display.image({
+          x: squareSize * 8 + squareSize / 2,
+          y: squareSize / 2,
+          origin: {
+            x: "center",
+            y: "center"
+          },
+          height: squareSize,
+          width: squareSize,
+          image: piece.graphic
+        });
+        piece.displayObject = img;
+        this.canvas.addChild(img);
+        img.piece = piece;
+        instance = this;
+        _results.push(img.dragAndDrop({
+          start: function() {
+            return instance.pickUpPiece(this);
+          },
+          end: function() {
+            return instance.dropPiece(this);
+          }
+        }));
       }
       return _results;
     };
@@ -404,6 +487,34 @@
       displayObj.x = (endSquare.x * squareSize) + squareSize / 2;
       displayObj.y = (endSquare.y * squareSize) + squareSize / 2;
       this.dragLock = false;
+      this.canvas.redraw();
+      return this.toggleTurn();
+    };
+
+    ChessGame.prototype.dropSuccess = function(index, endSquare, movedBySelf) {
+      var displayObj, piece, that;
+      console.log("dropsuccess");
+      piece = this.unplacedPieces[index];
+      if (movedBySelf) {
+        this.sendDrop(index, endSquare);
+      }
+      this.unplacedPieces.splice(index, 1);
+      displayObj = piece.displayObject;
+      console.log("dropping " + piece.name + " at " + endSquare.name);
+      endSquare.piece = piece;
+      piece.square = endSquare;
+      piece.placed = true;
+      that = this;
+      displayObj.bind("mouseenter", function() {
+        return that.drawThreat(this);
+      });
+      displayObj.bind("mouseleave", function() {
+        return that.undrawThreat(this);
+      });
+      displayObj.x = (endSquare.x * squareSize) + squareSize / 2;
+      displayObj.y = (endSquare.y * squareSize) + squareSize / 2;
+      this.dragLock = false;
+      this.calculateThreat();
       this.canvas.redraw();
       return this.toggleTurn();
     };
@@ -527,6 +638,63 @@
         gameId: this.gameId
       };
       return socket.emit('newMove', moveInfo);
+    };
+
+    ChessGame.prototype.sendDrop = function(index, endSquare) {
+      var dropInfo, pieceColor, pieceName, _ref, _ref1;
+      console.log("send drop");
+      console.log("index: " + index);
+      console.log("endsquare: " + endSquare.name);
+      console.log(this.unplacedPieces);
+      pieceName = (_ref = this.unplacedPieces[index]) != null ? _ref.text : void 0;
+      pieceColor = (_ref1 = this.unplacedPieces[index]) != null ? _ref1.color : void 0;
+      if (pieceName == null) {
+        console.log("Error finding piece to drop");
+        return;
+      }
+      dropInfo = {
+        player: sessionId,
+        piece: "" + pieceColor + " " + pieceName,
+        endSquare: [endSquare.x, endSquare.y],
+        gameId: this.gameId
+      };
+      return socket.emit('newDrop', dropInfo);
+    };
+
+    ChessGame.prototype.addPieceToGame = function(pieceInfo) {
+      var color, colorAndType, piece, pieceName, type;
+      console.log("adding piece to game:");
+      console.log(pieceInfo);
+      pieceName = pieceInfo.piece;
+      if (pieceName == null) {
+        return;
+      }
+      colorAndType = pieceName.split(" ");
+      if (colorAndType.length !== 2) {
+        return;
+      }
+      color = colorAndType[0];
+      type = colorAndType[1];
+      if (type === "pawn") {
+        piece = new window.Pawn(color, type, false);
+      }
+      if (type === "rook") {
+        piece = new window.Pawn(color, type, false);
+      }
+      if (type === "knight") {
+        piece = new window.Pawn(color, type, false);
+      }
+      if (type === "bishop") {
+        piece = new window.Pawn(color, type, false);
+      }
+      if (type === "queen") {
+        piece = new window.Pawn(color, type, false);
+      }
+      if (piece == null) {
+        return;
+      }
+      this.unplacedPieces.push(piece);
+      return this.drawUnplacedPieces();
     };
 
     ChessGame.prototype.isObstructed = function(startSquare, endSquare, board) {
