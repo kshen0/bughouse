@@ -13,13 +13,6 @@ window.Piece = class Piece
 
   move: (startSquare, endSquare, cb) ->
     if @validMove(startSquare, endSquare)
-      console.log "valid move"
-      ###
-      endSquare.piece.graphic.remove() if endSquare.piece?
-      @square = endSquare
-      endSquare.piece = startSquare.piece
-      startSquare.piece = undefined
-      ###
       return cb(true)
     return cb(false)
 

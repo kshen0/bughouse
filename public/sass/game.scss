@@ -4,10 +4,14 @@ body {
   }
 
   $board-side: 560px;
-  #board-container {
+  #boards {
     //margin: 0 auto;
     width: 1500px; 
     height: $board-side; 
+    .board-container {
+      height: 440px;
+    }
+    
     .board {
       width: 600px; 
       height: 400px; 

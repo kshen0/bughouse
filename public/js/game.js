@@ -14,7 +14,8 @@
   COLORS = {
     red: "#e74c3c",
     dark: "#34495e",
-    light: "#95a5a6"
+    light: "#95a5a6",
+    green: "#27ae60"
   };
 
   squareSize = 50;
@@ -36,13 +37,14 @@
     var canvas, gameId, _i, _len, _ref, _results;
     playerColor = playerInfo.color;
     playerGameNum = playerInfo.gameNum;
+    $('#player-label').text("You are " + playerColor + " on board " + playerGameNum);
     _ref = ['one', 'two'];
     _results = [];
     for (_i = 0, _len = _ref.length; _i < _len; _i++) {
       gameId = _ref[_i];
       canvas = oCanvas.create({
         canvas: "#board-" + gameId,
-        background: '#27ae60'
+        background: COLORS.green
       });
       canvas.height = 8 * squareSize;
       canvas.width = 12 * squareSize;
@@ -105,6 +107,8 @@
       this.sendMove = __bind(this.sendMove, this);
       this.calculateThreat = __bind(this.calculateThreat, this);
       this.dropSuccess = __bind(this.dropSuccess, this);
+      this.createPiece = __bind(this.createPiece, this);
+      this.drawPromoteDialog = __bind(this.drawPromoteDialog, this);
       this.moveSuccess = __bind(this.moveSuccess, this);
       this.resetBoardColor = __bind(this.resetBoardColor, this);
       this.drawUnplacedPieces = __bind(this.drawUnplacedPieces, this);
@@ -161,7 +165,7 @@
     ChessGame.prototype.whitesTurn = true;
 
     ChessGame.prototype.createBoard = function(canvas) {
-      var board, col, letter, letters, num, x, y, _i, _j, _k, _l, _m;
+      var board, letter, letters, num, x, y, _i, _j, _k, _l;
       letters = (function() {
         var _i, _results;
         _results = [];
@@ -192,28 +196,41 @@
           board[x][y].y = y;
         }
       }
-      for (col = _k = 0; _k <= 7; col = ++_k) {
-        board[col][1].piece = new window.Pawn("white", "pawn", true);
-        board[col][6].piece = new window.Pawn("black", "pawn", true);
-      }
-      board[this.A][0].piece = new window.Rook("white", "rook", true);
-      board[this.H][0].piece = new window.Rook("white", "rook", true);
-      board[this.A][7].piece = new window.Rook("black", "rook", true);
-      board[this.H][7].piece = new window.Rook("black", "rook", true);
-      board[this.B][0].piece = new window.Knight("white", "knight", true);
-      board[this.G][0].piece = new window.Knight("white", "knight", true);
-      board[this.B][7].piece = new window.Knight("black", "knight", true);
-      board[this.G][7].piece = new window.Knight("black", "knight", true);
-      board[this.C][0].piece = new window.Bishop("white", "bishop", true);
-      board[this.F][0].piece = new window.Bishop("white", "bishop", true);
-      board[this.C][7].piece = new window.Bishop("black", "bishop", true);
-      board[this.F][7].piece = new window.Bishop("black", "bishop", true);
-      board[this.E][0].piece = new window.King("white", "king", true);
-      board[this.E][7].piece = new window.King("black", "king", true);
-      board[this.D][0].piece = new window.Queen("white", "queen", true);
-      board[this.D][7].piece = new window.Queen("black", "queen", true);
-      for (x = _l = 0; _l <= 7; x = ++_l) {
-        for (y = _m = 0; _m <= 7; y = ++_m) {
+      board[3][6].piece = new window.Pawn("white", "pawn", true);
+      /*
+      for col in [0..7]
+        board[col][1].piece = new window.Pawn("white", "pawn", true)
+        board[col][6].piece = new window.Pawn("black", "pawn", true)
+      
+      # Rooks
+      board[@A][0].piece = new window.Rook("white", "rook", true)
+      board[@H][0].piece = new window.Rook("white", "rook", true)
+      board[@A][7].piece = new window.Rook("black", "rook", true)
+      board[@H][7].piece = new window.Rook("black", "rook", true)
+      
+      # Knights 
+      board[@B][0].piece = new window.Knight("white", "knight", true)
+      board[@G][0].piece = new window.Knight("white", "knight", true)
+      board[@B][7].piece = new window.Knight("black", "knight", true)
+      board[@G][7].piece = new window.Knight("black", "knight", true)
+      
+      # Bishops
+      board[@C][0].piece = new window.Bishop("white", "bishop", true)
+      board[@F][0].piece = new window.Bishop("white", "bishop", true)
+      board[@C][7].piece = new window.Bishop("black", "bishop", true)
+      board[@F][7].piece = new window.Bishop("black", "bishop", true)
+      
+      # Kings
+      board[@E][0].piece = new window.King("white", "king", true)
+      board[@E][7].piece = new window.King("black", "king", true)
+      
+      # Queens 
+      board[@D][0].piece = new window.Queen("white", "queen", true)
+      board[@D][7].piece = new window.Queen("black", "queen", true)
+      */
+
+      for (x = _k = 0; _k <= 7; x = ++_k) {
+        for (y = _l = 0; _l <= 7; y = ++_l) {
           board[x][y].graphic = this.createRectangle(x * squareSize, y * squareSize, (y + x) % 2 === 0 ? COLORS.light : COLORS.dark);
         }
       }
@@ -341,13 +358,20 @@
     };
 
     ChessGame.prototype.drawPieces = function(canvas, board) {
-      var img, instance, that, x, y, _i, _results;
-      _results = [];
+      var img, instance, that, x, y, _i, _j, _k, _ref, _results;
       for (x = _i = 0; _i <= 7; x = ++_i) {
+        for (y = _j = 0; _j <= 7; y = ++_j) {
+          if (((_ref = this.board[x][y].piece) != null ? _ref.displayObject : void 0) != null) {
+            this.board[x][y].piece.displayObject.remove();
+          }
+        }
+      }
+      _results = [];
+      for (x = _k = 0; _k <= 7; x = ++_k) {
         _results.push((function() {
-          var _j, _results1;
+          var _l, _results1;
           _results1 = [];
-          for (y = _j = 0; _j <= 7; y = ++_j) {
+          for (y = _l = 0; _l <= 7; y = ++_l) {
             if (this.board[x][y].piece != null) {
               img = this.canvas.display.image({
                 x: x * squareSize + squareSize / 2,
@@ -455,7 +479,7 @@
       _results = [];
       for (_i = 0, _len = threatenedSqs.length; _i < _len; _i++) {
         sq = threatenedSqs[_i];
-        _results.push(sq.graphic.fill = color || ((sq.y + sq.x) % 2 === 0 ? COLORS.light : COLORS.dark));
+        _results.push(sq != null ? sq.graphic.fill = color || ((sq.y + sq.x) % 2 === 0 ? COLORS.light : COLORS.dark) : void 0);
       }
       return _results;
     };
@@ -486,9 +510,77 @@
       startSquare.piece = void 0;
       displayObj.x = (endSquare.x * squareSize) + squareSize / 2;
       displayObj.y = (endSquare.y * squareSize) + squareSize / 2;
+      if (endSquare.piece.text === 'pawn') {
+        if (endSquare.piece.color === 'white' && endSquare.y === 7) {
+          console.log('promote white pawn');
+          this.drawPromoteDialog('white', endSquare);
+        }
+        if (endSquare.piece.color === 'black' && endSquare.y === 0) {
+          console.log('promote black pawn');
+        }
+      }
       this.dragLock = false;
       this.canvas.redraw();
       return this.toggleTurn();
+    };
+
+    ChessGame.prototype.drawPromoteDialog = function(color, endSquare) {
+      var height, i, pieceName, pieces, rectangle, sprite, that, width, _i, _len;
+      width = 4 * squareSize;
+      height = 1.5 * squareSize;
+      rectangle = this.canvas.display.rectangle({
+        x: squareSize * 4 - width / 2,
+        y: squareSize * 4 - height / 2,
+        width: width,
+        height: height,
+        fill: COLORS.green
+      });
+      pieces = ['knight', 'bishop', 'rook', 'queen'];
+      for (i = _i = 0, _len = pieces.length; _i < _len; i = ++_i) {
+        pieceName = pieces[i];
+        sprite = this.canvas.display.image({
+          x: squareSize * i,
+          y: squareSize / 4,
+          origin: {
+            x: "left",
+            y: "left"
+          },
+          height: squareSize,
+          width: squareSize,
+          image: "img/" + pieceName + "_" + color + ".png"
+        });
+        that = this;
+        console.log("bind " + pieceName);
+        sprite.bind("click", function() {
+          return that.createPiece(this, color, endSquare, rectangle);
+        });
+        rectangle.addChild(sprite);
+      }
+      return this.canvas.addChild(rectangle);
+    };
+
+    ChessGame.prototype.createPiece = function(eventInfo, color, endSquare, picker) {
+      var filename, _ref;
+      filename = (_ref = eventInfo.img) != null ? _ref.src : void 0;
+      if (filename == null) {
+        console.log("no imagename found in createPiece");
+        return;
+      }
+      if (endSquare.piece != null) {
+        endSquare.piece.displayObject.remove();
+      }
+      if (filename.indexOf('knight') > -1) {
+        endSquare.piece = new window.Knight(color, "knight", true);
+      } else if (filename.indexOf('bishop') > -1) {
+        endSquare.piece = new window.Bishop(color, "bishop", true);
+      } else if (filename.indexOf('rook') > -1) {
+        endSquare.piece = new window.Rook(color, "rook", true);
+      } else if (filename.indexOf('queen') > -1) {
+        endSquare.piece = new window.Queen(color, "queen", true);
+      }
+      picker.remove();
+      this.drawPieces();
+      return this.canvas.redraw();
     };
 
     ChessGame.prototype.dropSuccess = function(index, endSquare, movedBySelf) {

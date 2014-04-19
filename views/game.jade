@@ -8,10 +8,13 @@ html
     title Bughouse Chess
   body
     h1 Bughouse 
-    div#board-container
-      canvas.board#board-one
-      canvas.board#board-two
-    h3#turn-label White's turn
+    h3#player-label
+    div#boards
+      div.board-container
+        canvas.board#board-one
+        h3#turn-label White's turn
+      div.board-container
+        canvas.board#board-two
     script(src='/js/lib/ocanvas-2.5.1.min.js')    
     script(src='/js/game_utils.js')
     script(src='/js/game_classes.js')

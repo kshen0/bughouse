@@ -10,6 +10,7 @@ COLORS =
   red: "#e74c3c"
   dark: "#34495e"
   light: "#95a5a6"
+  green: "#27ae60"
 #squareSize = 70
 squareSize = 50
 
@@ -27,11 +28,11 @@ oCanvas.domReady ()->
 
 createGames = (playerInfo) ->
   playerColor = playerInfo.color
-
   playerGameNum = playerInfo.gameNum
+  $('#player-label').text "You are #{playerColor} on board #{playerGameNum}" 
 
   for gameId in ['one', 'two']
-    canvas = oCanvas.create {canvas: "#board-#{gameId}", background: '#27ae60'}
+    canvas = oCanvas.create {canvas: "#board-#{gameId}", background: COLORS.green}
     canvas.height = 8 * squareSize;
     canvas.width = 12 * squareSize; 
     games[gameId] = new ChessGame(canvas, playerColor, gameId)
@@ -112,8 +113,10 @@ class ChessGame
         board[x][y].x = x
         board[x][y].y = y
 
+    board[3][6].piece = new window.Pawn("white", "pawn", true)
     ## Create pieces
     # Rows of pawns
+    ###
     for col in [0..7]
       board[col][1].piece = new window.Pawn("white", "pawn", true)
       board[col][6].piece = new window.Pawn("black", "pawn", true)
@@ -143,7 +146,7 @@ class ChessGame
     # Queens 
     board[@D][0].piece = new window.Queen("white", "queen", true)
     board[@D][7].piece = new window.Queen("black", "queen", true)
-
+    ###
 
     # couple each board square with a canvas object
     for x in [0..7]
@@ -258,6 +261,11 @@ class ChessGame
   drawPieces: (canvas, board) =>
     for x in [0..7]
       for y in [0..7]
+        if @board[x][y].piece?.displayObject?
+          @board[x][y].piece.displayObject.remove()
+
+    for x in [0..7]
+      for y in [0..7]
         if @board[x][y].piece?
           img = @canvas.display.image({
             x: x * squareSize + squareSize / 2
@@ -329,7 +337,7 @@ class ChessGame
     return unless piece?
     threatenedSqs = piece.getThreatenedSquares(@board, x, y)
     for sq in threatenedSqs
-      sq.graphic.fill = color or if (sq.y + sq.x) % 2 == 0 then COLORS.light else COLORS.dark
+      sq?.graphic.fill = color or if (sq.y + sq.x) % 2 == 0 then COLORS.light else COLORS.dark
 
 
   # TODO validate move serverside; check for authenticity client side
@@ -338,7 +346,6 @@ class ChessGame
       console.log "invalid displayObj: #{displayObj}"
       return
 
-    # move is already reflected client side, no need to repeat it
     if movedBySelf
       @sendMove(startSquare, endSquare)
     console.log "#{startSquare.piece.text} #{startSquare.name}-#{endSquare.name}"
@@ -364,9 +371,73 @@ class ChessGame
     displayObj.x = (endSquare.x * squareSize) + squareSize / 2
     displayObj.y = (endSquare.y * squareSize) + squareSize / 2
 
+    # check for pawn promotion
+    if endSquare.piece.text is 'pawn'
+      if endSquare.piece.color is 'white' and endSquare.y is 7
+        console.log 'promote white pawn'
+        @drawPromoteDialog 'white', endSquare
+      if endSquare.piece.color is 'black' and endSquare.y is 0
+        console.log 'promote black pawn'
+
     @dragLock = false
     @canvas.redraw()
     @toggleTurn()
+
+  drawPromoteDialog: (color, endSquare) =>
+    width = 4 * squareSize;
+    height = 1.5 * squareSize;
+    rectangle = @canvas.display.rectangle( {
+      x: squareSize * 4 - width / 2,
+      y: squareSize * 4 - height / 2,
+      width: width,
+      height: height,
+      fill: COLORS.green; 
+    })
+
+    pieces = ['knight', 'bishop', 'rook', 'queen']
+    for pieceName, i in pieces
+      sprite = @canvas.display.image({
+        x: squareSize * i
+        y: squareSize / 4 
+        origin: {x: "left", y: "left"}
+        height: squareSize
+        width: squareSize
+        image: "img/#{pieceName}_#{color}.png"
+      })
+
+
+      that = @
+      console.log "bind #{pieceName}"
+      # TODO: figure out why this always binds the last piece name
+      sprite.bind "click", () ->
+        that.createPiece @, color, endSquare, rectangle
+      rectangle.addChild(sprite)
+
+    @canvas.addChild(rectangle)
+
+  createPiece: (eventInfo, color, endSquare, picker) =>
+    filename = eventInfo.img?.src
+    if not filename?
+      console.log "no imagename found in createPiece"
+      return
+
+    if endSquare.piece?
+      endSquare.piece.displayObject.remove()
+
+    # sorry not sorry
+    if filename.indexOf('knight') > -1 
+      endSquare.piece = new window.Knight(color, "knight", true)
+    else if filename.indexOf('bishop') > -1 
+      endSquare.piece = new window.Bishop(color, "bishop", true)
+    else if filename.indexOf('rook') > -1 
+      endSquare.piece = new window.Rook(color, "rook", true)
+    else if filename.indexOf('queen') > -1 
+      endSquare.piece = new window.Queen(color, "queen", true)
+
+    picker.remove()
+
+    @drawPieces()
+    @canvas.redraw()
 
   dropSuccess: (index, endSquare, movedBySelf) =>
     console.log "dropsuccess"

@@ -1,14 +1,16 @@
 body {
   font-family: 'Open Sans', Helvetica, sans-serif; }
-  body #board-container {
+  body #boards {
     width: 1500px;
     height: 560px; }
-    body #board-container .board {
+    body #boards .board-container {
+      height: 440px; }
+    body #boards .board {
       width: 600px;
       height: 400px;
       float: left;
       margin-right: 25px; }
-    body #board-container .pieces {
+    body #boards .pieces {
       float: left;
       width: 200px;
       height: 560px;

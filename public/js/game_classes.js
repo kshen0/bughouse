@@ -32,14 +32,6 @@
 
     Piece.prototype.move = function(startSquare, endSquare, cb) {
       if (this.validMove(startSquare, endSquare)) {
-        console.log("valid move");
-        /*
-        endSquare.piece.graphic.remove() if endSquare.piece?
-        @square = endSquare
-        endSquare.piece = startSquare.piece
-        startSquare.piece = undefined
-        */
-
         return cb(true);
       }
       return cb(false);
