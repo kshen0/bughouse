@@ -3,6 +3,13 @@ body {
     family: 'Open Sans', Helvetica, sans-serif;
   }
 
+  #modal {
+    width: 400px;
+    height: 100px;
+    margin: 0 auto;
+    display: none;
+  }
+
   $board-side: 560px;
   #boards {
     //margin: 0 auto;
@@ -11,7 +18,6 @@ body {
     .board-container {
       height: 440px;
     }
-    
     .board {
       width: 600px; 
       height: 400px; 

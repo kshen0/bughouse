@@ -73,7 +73,6 @@
       }
       start = moveInfo.startSquare;
       end = moveInfo.endSquare;
-      console.log("new incoming move " + moveInfo.piece + " " + start + "-" + end);
       game = boards[moveInfo.gameId].board;
       startSquare = game.board[start[0]][start[1]];
       endSquare = game.board[end[0]][end[1]];
@@ -85,17 +84,13 @@
         return;
       }
       end = dropInfo.endSquare;
-      console.log("new incoming drop " + dropInfo.piece + " on " + end);
       game = boards[dropInfo.gameId];
       endSquare = game.board[end[0]][end[1]];
       return game.dropSuccess(game.getUnplacedPieceIndex(dropInfo.piece), endSquare);
     });
     return socket.on('transferPiece', function(pieceInfo) {
       var targetGame;
-      console.log("transfer piece");
-      console.log(pieceInfo);
       targetGame = pieceInfo.gameId === 'one' ? 'two' : 'one';
-      console.log(boards);
       return boards[targetGame].board.addPieceToGame(pieceInfo);
     });
   };
@@ -118,6 +113,8 @@
   };
 
   Board = (function() {
+    var gameOver;
+
     Board.prototype.A = 7;
 
     Board.prototype.B = 6;
@@ -156,6 +153,8 @@
 
     Board.prototype.whitesTurn = true;
 
+    gameOver = false;
+
     function Board(boardParams, playerColor, canvas, gameId) {
       this.playerColor = playerColor;
       this.canvas = canvas;
@@ -172,10 +171,12 @@
       this.resetBoardColor = __bind(this.resetBoardColor, this);
       this.drawUnplacedPieces = __bind(this.drawUnplacedPieces, this);
       this.drawPieces = __bind(this.drawPieces, this);
+      this.getUnplacedPieceIndex = __bind(this.getUnplacedPieceIndex, this);
       this.dropPiece = __bind(this.dropPiece, this);
       this.pickUpPiece = __bind(this.pickUpPiece, this);
       this.undrawThreat = __bind(this.undrawThreat, this);
       this.drawThreat = __bind(this.drawThreat, this);
+      this.debugPiece = __bind(this.debugPiece, this);
       this.unplacedPieces = [];
       this.createBoard(boardParams);
       this.drawPieces();
@@ -286,10 +287,36 @@
       return rectangle;
     };
 
+    Board.prototype.debugPiece = function(img) {
+      var html, k, piece, pieceInfo, square, v, x, y, _ref, _ref1, _ref2;
+      x = Math.floor(img.x / squareSize);
+      y = Math.floor(img.y / squareSize);
+      square = this.board[x][y];
+      piece = square.piece;
+      if (piece == null) {
+        return;
+      }
+      pieceInfo = {
+        name: piece.name,
+        computedSquare: square.name,
+        computedSquareCoords: "" + square.x + ", " + square.y,
+        linkedSquare: (_ref = piece.square) != null ? _ref.name : void 0,
+        linkedSquareCoords: "" + ((_ref1 = piece.square) != null ? _ref1.x : void 0) + ", " + ((_ref2 = piece.square) != null ? _ref2.y : void 0)
+      };
+      html = "<ul>";
+      for (k in pieceInfo) {
+        v = pieceInfo[k];
+        html += "<li>" + k + ": " + v + "</li>";
+      }
+      html += "</ul>";
+      return $("#debug").html(html);
+    };
+
     Board.prototype.drawThreat = function(img) {
       if (this.dragLock) {
         return void 0;
       }
+      this.debugPiece(img);
       this.setSquareColorForImg(img, COLORS.red);
       return this.canvas.redraw();
     };
@@ -320,7 +347,7 @@
     };
 
     Board.prototype.dropPiece = function(displayObj, playerColor) {
-      var piece, revert,
+      var colorturn, otherColor, piece, revert,
         _this = this;
       piece = displayObj.piece;
       if (piece == null) {
@@ -333,6 +360,10 @@
         displayObj.y = _this.startY;
         return _this.dragLock = false;
       };
+      if (this.gameOver) {
+        revert();
+        return;
+      }
       if (playerGameNum !== this.gameId) {
         console.log("player is playing on board " + playerGameNum + " and cannot move pieces on board " + this.gameId);
         revert();
@@ -349,16 +380,15 @@
         return;
       }
       this.endSquare = this.board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)];
+      colorturn = this.whitesTurn ? "white" : "black";
+      otherColor = this.whitesTurn ? "black" : "white";
       if (piece.placed) {
         return piece.move(this.startSquare, this.endSquare, function(isValid) {
-          var colorturn;
           if (!isValid || _this.isObstructed(_this.startSquare, _this.endSquare, _this.board)) {
             return revert();
           } else if (_this.check) {
             if (!_this.isCheckRemoved(_this.startSquare, _this.endSquare)) {
-              colorturn = _this.whitesTurn ? "white" : "black";
               console.log("" + colorturn + " is in check; must move king or block check");
-              alert("" + colorturn + " is in check; must move king or block check");
               return revert();
             } else {
               return _this.moveSuccess(displayObj, _this.startSquare, _this.endSquare, true);
@@ -381,18 +411,18 @@
       }
     };
 
-    /*
-    
-    getUnplacedPieceIndex: (pieceName) =>
-      for i in [0...@unplacedPieces.length]
-        console.log "compare: "
-        console.log @unplacedPieces[i]
-        console.log " with "
-        console.log pieceName
-        if @unplacedPieces[i].name is pieceName
-          return i
-    */
-
+    Board.prototype.getUnplacedPieceIndex = function(pieceName) {
+      var i, _i, _ref;
+      for (i = _i = 0, _ref = this.unplacedPieces.length; 0 <= _ref ? _i < _ref : _i > _ref; i = 0 <= _ref ? ++_i : --_i) {
+        console.log("compare: ");
+        console.log(this.unplacedPieces[i]);
+        console.log(" with ");
+        console.log(pieceName);
+        if (this.unplacedPieces[i].name === pieceName) {
+          return i;
+        }
+      }
+    };
 
     Board.prototype.drawPieces = function(canvas, board) {
       var img, that, x, y, _i, _j, _k, _ref, _results;
@@ -659,32 +689,54 @@
       }
       this.calculateThreat();
       this.resetColors();
-      return this.check = this.checkForCheck();
+      this.check = this.checkForCheck();
+      return this.checkForCheckmate();
     };
 
-    Board.prototype.isCheckRemoved = function() {
-      var endSqPiece, newCheck;
+    Board.prototype.isCheckRemoved = function(startSquare, endSquare) {
+      var endSqPiece, newCheck, _ref, _ref1;
       if (!this.check) {
         console.log("player is not in check to begin with!");
         return false;
       }
-      endSqPiece = this.endSquare.piece;
-      this.startSquare.piece.square = this.endSquare;
-      this.endSquare.piece = this.startSquare.piece;
-      this.startSquare.piece = void 0;
+      if (((_ref = endSquare.piece) != null ? _ref.color : void 0) === ((_ref1 = startSquare.piece) != null ? _ref1.color : void 0)) {
+        return false;
+      }
+      /*
+      endSqPiece = @endSquare.piece
+      @startSquare.piece.square = @endSquare
+      @endSquare.piece = @startSquare.piece
+      @startSquare.piece = undefined
+      @calculateThreat()
+      newCheck = @checkForCheck()
+      
+      # reset from temporary position
+      @endSquare.piece.square = @startSquare
+      @startSquare.piece = @endSquare.piece
+      @endSquare.piece = endSqPiece
+      @calculateThreat()
+      
+      return newCheck is false
+      
+      # temporarily change board to assess check
+      */
+
+      endSqPiece = endSquare.piece;
+      startSquare.piece.square = endSquare;
+      endSquare.piece = startSquare.piece;
+      startSquare.piece = void 0;
       this.calculateThreat();
       newCheck = this.checkForCheck();
-      this.endSquare.piece.square = this.startSquare;
-      this.startSquare.piece = this.endSquare.piece;
-      this.endSquare.piece = endSqPiece;
+      endSquare.piece.square = startSquare;
+      startSquare.piece = endSquare.piece;
+      endSquare.piece = endSqPiece;
       this.calculateThreat();
       return newCheck === false;
     };
 
-    Board.prototype.checkForCheck = function() {
-      var colorTurn, kingSq, piece, x, y, _i, _j, _k, _len, _ref, _ref1;
+    Board.prototype.checkForCheckGivenColor = function(colorTurn) {
+      var kingSq, piece, x, y, _i, _j, _k, _len, _ref, _ref1;
       kingSq = void 0;
-      colorTurn = this.whitesTurn ? "white" : "black";
       for (x = _i = 0; _i <= 7; x = ++_i) {
         for (y = _j = 0; _j <= 7; y = ++_j) {
           if (((_ref = this.board[x][y].piece) != null ? _ref.name : void 0) === ("" + colorTurn + " king")) {
@@ -692,11 +744,65 @@
           }
         }
       }
+      /*
+      console.log 'kingsq'
+      console.log kingSq
+      console.log 'board[3][7]'
+      console.log @board[3][7]
+      */
+
       _ref1 = kingSq.threats;
       for (_k = 0, _len = _ref1.length; _k < _len; _k++) {
         piece = _ref1[_k];
         if (piece.color !== colorTurn) {
-          console.log("" + colorTurn + " is in check");
+          return true;
+        }
+      }
+      return false;
+    };
+
+    Board.prototype.checkForCheck = function() {
+      var colorTurn;
+      colorTurn = this.whitesTurn ? "white" : "black";
+      return this.checkForCheckGivenColor(colorTurn);
+    };
+
+    Board.prototype.checkForCheckmate = function() {
+      var color, piece, team, x, y, _i, _j;
+      if (!this.check) {
+        return false;
+      }
+      color = this.whitesTurn ? 'white' : 'black';
+      for (x = _i = 0; _i <= 7; x = ++_i) {
+        for (y = _j = 0; _j <= 7; y = ++_j) {
+          piece = this.board[x][y].piece;
+          if (!((piece != null) && piece.color === color)) {
+            continue;
+          }
+          if (this.pieceCanStopCheck(piece, this.board[x][y])) {
+            console.log("" + piece.name + " at " + this.board[x][y].name + " can stop check");
+            return false;
+          }
+        }
+      }
+      this.gameOver = true;
+      if (this.gameId === 'one' && color === 'black' || this.gamId === 'two' && color === 'white') {
+        team = 1;
+      } else {
+        team = 2;
+      }
+      $("#modal").html("<h3>Game over! Team " + team + " wins!");
+      $("modal").toggle();
+      return true;
+    };
+
+    Board.prototype.pieceCanStopCheck = function(piece, startSquare) {
+      var endSquare, i, threatenedSqs, _i, _len;
+      threatenedSqs = piece.getThreatenedSquares(this.board, startSquare.x, startSquare.y);
+      for (i = _i = 0, _len = threatenedSqs.length; _i < _len; i = ++_i) {
+        endSquare = threatenedSqs[i];
+        if (this.isCheckRemoved(startSquare, endSquare)) {
+          console.log("" + startSquare.name + " - " + endSquare.name + " will block check");
           return true;
         }
       }
@@ -797,8 +903,6 @@
 
     Board.prototype.addPieceToGame = function(pieceInfo) {
       var color, colorAndType, piece, pieceName, pieceParams, type;
-      console.log("adding piece to game:");
-      console.log(pieceInfo);
       pieceName = pieceInfo.piece;
       if (pieceName == null) {
         return;

@@ -55,7 +55,7 @@ init = () ->
     return if getRoomId() isnt moveInfo.roomId
     start = moveInfo.startSquare
     end = moveInfo.endSquare
-    console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
+    #console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
     game = boards[moveInfo.gameId].board
     startSquare = game.board[start[0]][start[1]]
     endSquare = game.board[end[0]][end[1]]
@@ -64,17 +64,16 @@ init = () ->
   socket.on 'newDrop', (dropInfo) ->
     return if dropInfo.player is sessionId
     end = dropInfo.endSquare
-    console.log "new incoming drop #{dropInfo.piece} on #{end}"
+    #console.log "new incoming drop #{dropInfo.piece} on #{end}"
     game = boards[dropInfo.gameId]
     endSquare = game.board[end[0]][end[1]]
     game.dropSuccess game.getUnplacedPieceIndex(dropInfo.piece), endSquare
 
   socket.on 'transferPiece', (pieceInfo) ->
-    console.log "transfer piece"
-    console.log pieceInfo
+    #console.log "transfer piece"
+    #console.log pieceInfo
     targetGame = if pieceInfo.gameId is 'one' then 'two' else 'one'
     #if playerColor is pieceInfo.color and playerGameNum is targetGame 
-    console.log boards
     boards[targetGame].board.addPieceToGame(pieceInfo)
 
 handleConnectResponse = (resp) ->
@@ -119,6 +118,7 @@ class Board
   board: undefined
   playerColor: undefined
   whitesTurn: true
+  gameOver = false
 
   constructor: (boardParams, @playerColor, @canvas, @gameId) ->
     @unplacedPieces = []
@@ -192,8 +192,29 @@ class Board
     @canvas.addChild(rectangle)
     return rectangle
 
+  debugPiece: (img) =>
+    x = Math.floor(img.x / squareSize)
+    y = Math.floor(img.y / squareSize)
+    square = @board[x][y]
+    piece = square.piece
+    return unless piece?
+    pieceInfo =
+      name: piece.name
+      computedSquare: square.name
+      computedSquareCoords: "#{square.x}, #{square.y}"
+      linkedSquare: piece.square?.name
+      linkedSquareCoords: "#{piece.square?.x}, #{piece.square?.y}"
+
+    html = "<ul>"
+    for k,v of pieceInfo
+      html += "<li>#{k}: #{v}</li>"
+    html += "</ul>"
+    $("#debug").html html
+
+
   drawThreat: (img) =>
     return undefined if @dragLock
+    @debugPiece img
     @setSquareColorForImg img, COLORS.red
     @canvas.redraw()
 
@@ -230,6 +251,10 @@ class Board
       displayObj.y = @startY 
       @dragLock = false
 
+    if @gameOver
+      revert()
+      return
+
     if playerGameNum isnt @gameId
       console.log "player is playing on board #{playerGameNum} and cannot move pieces on board #{@gameId}" 
       revert()
@@ -247,15 +272,17 @@ class Board
       return
 
     @endSquare = @board[Math.floor(displayObj.x / squareSize)][Math.floor(displayObj.y / squareSize)]
+    colorturn = if @whitesTurn then "white" else "black"
+    otherColor = if @whitesTurn then "black" else "white"
     if piece.placed
       piece.move @startSquare, @endSquare, (isValid) =>
         if not isValid or @isObstructed(@startSquare, @endSquare, @board)
           revert()
         else if @check
           if not @isCheckRemoved(@startSquare, @endSquare)
-            colorturn = if @whitesTurn then "white" else "black"
+          #if not @isCheckRemoved()
             console.log "#{colorturn} is in check; must move king or block check"
-            alert "#{colorturn} is in check; must move king or block check"
+            #alert "#{colorturn} is in check; must move king or block check"
             revert()
           else
             @moveSuccess(displayObj, @startSquare, @endSquare, true)
@@ -276,8 +303,6 @@ class Board
       console.log piece
       return
 
-  ###
-
   getUnplacedPieceIndex: (pieceName) =>
     for i in [0...@unplacedPieces.length]
       console.log "compare: "
@@ -286,7 +311,6 @@ class Board
       console.log pieceName
       if @unplacedPieces[i].name is pieceName
         return i
-  ###
 
   drawPieces: (canvas, board) =>
     for x in [0..7]
@@ -407,6 +431,7 @@ class Board
       if endSquare.piece.color is 'black' and endSquare.y is 0
         console.log 'promote black pawn'
 
+
     @dragLock = false
     @canvas.redraw()
     @toggleTurn()
@@ -513,13 +538,21 @@ class Board
     @resetColors()
     # check for check(mate) for the player whose turn it just became
     @check = @checkForCheck()
+    @checkForCheckmate()
 
-  isCheckRemoved: () ->
+  isCheckRemoved: (startSquare, endSquare) ->
+  #isCheckRemoved: () ->
     if not @check
       console.log "player is not in check to begin with!"
       return false
 
-    # temporarily change board to assess check
+    # do not check invalid moves
+    # this was the source of a bigass bug
+    if endSquare.piece?.color is startSquare.piece?.color
+      return false
+
+    #console.log "evaluate #{startSquare.name} - #{endSquare.name}"
+    ###
     endSqPiece = @endSquare.piece
     @startSquare.piece.square = @endSquare
     @endSquare.piece = @startSquare.piece
@@ -535,21 +568,88 @@ class Board
 
     return newCheck is false
 
-  checkForCheck: () ->
+    # temporarily change board to assess check
+    ###
+    #console.log "A: board[3][7]: #{@board[3][7].piece?.name}"
+    endSqPiece = endSquare.piece
+    startSquare.piece.square = endSquare
+    endSquare.piece = startSquare.piece
+    startSquare.piece = undefined
+    #console.log "B: board[3][7]: #{@board[3][7].piece?.name}"
+    @calculateThreat()
+    newCheck = @checkForCheck()
+
+    # reset from temporary position
+    endSquare.piece.square = startSquare
+    startSquare.piece = endSquare.piece
+    endSquare.piece = endSqPiece
+    @calculateThreat()
+
+    return newCheck is false
+
+  checkForCheckGivenColor: (colorTurn) ->
     # find king
     kingSq = undefined
-    colorTurn = if @whitesTurn then "white" else "black"
     for x in [0..7]
       for y in [0..7]
         if @board[x][y].piece?.name is "#{colorTurn} king"
           kingSq = @board[x][y]
 
+    ###
+    console.log 'kingsq'
+    console.log kingSq
+    console.log 'board[3][7]'
+    console.log @board[3][7]
+    ###
+
     for piece in kingSq.threats
       if piece.color isnt colorTurn
-        console.log "#{colorTurn} is in check"
+        #console.log "#{colorTurn} is in check"
         return true
 
     return false
+
+  checkForCheck: () ->
+    colorTurn = if @whitesTurn then "white" else "black"
+    return @checkForCheckGivenColor(colorTurn)
+
+  checkForCheckmate: () ->
+    return false unless @check
+
+    # check if {color} king is in checkmate
+    color = if @whitesTurn then 'white' else 'black'
+    for x in [0..7]
+      for y in [0..7]
+        piece = @board[x][y].piece
+        continue unless piece? and piece.color is color
+        if @pieceCanStopCheck(piece, @board[x][y])
+          console.log "#{piece.name} at #{@board[x][y].name} can stop check"
+          return false
+
+    @gameOver = true
+    if @gameId is 'one' and color is 'black' or @gamId is 'two' and color is 'white'
+      team = 1
+    else
+      team = 2
+
+
+    $("#modal").html "<h3>Game over! Team #{team} wins!"
+    $("modal").toggle()
+    return true
+
+  pieceCanStopCheck: (piece, startSquare) ->
+    #console.log "evaluate piece"
+    #console.log piece
+    #console.log "#{piece.name} at #{startSquare.x}, #{startSquare.y}"
+    threatenedSqs = piece.getThreatenedSquares(@board, startSquare.x, startSquare.y)
+    # check possible moves for this piece
+    for endSquare,i in threatenedSqs 
+      if @isCheckRemoved startSquare, endSquare
+        console.log "#{startSquare.name} - #{endSquare.name} will block check"
+        return true
+    return false
+
+
 
   resetColors: () ->
     for x in [0..7]
@@ -557,6 +657,7 @@ class Board
         @setSquareColorForImg @board[x][y].graphic
 
   calculateThreat: () =>
+    #console.log "0: board[3][7]: #{@board[3][7].piece?.name}"
     # reset threat for each square
     for x in [0..7]
       for y in [0..7]
@@ -607,9 +708,6 @@ class Board
     socket.emit 'newDrop', dropInfo
 
   addPieceToGame: (pieceInfo) =>
-    console.log "adding piece to game:"
-    console.log pieceInfo
-
     pieceName = pieceInfo.piece
     return unless pieceName? 
     colorAndType = pieceName.split " "
