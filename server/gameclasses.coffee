@@ -1,18 +1,10 @@
-window.Game = window.Game or {}
-
-# TODO: game controller class
-
-window.Square = class Square
+exports.Square = class Square
   constructor: (@name, @row, @col, @piece, @x, @y) ->
     @threat = []
 
-window.Piece = class Piece
-  constructor: (params) ->
-    # unpack params
-    @color = params.color
-    @text = params.text 
-    @placed = params.placed
-    @graphic = "../img/#{@text}_#{@color}.png"
+exports.Piece = class Piece
+  constructor: (@color, @text, @placed) ->
+    @graphic = "img/#{text}_#{color}.png"
     @name = "#{@color} #{@text}"
 
   move: (startSquare, endSquare, cb) ->
@@ -32,7 +24,7 @@ window.Piece = class Piece
   toString: () ->
     return "#{@color} #{@text}"
 
-window.Pawn = class Pawn extends Piece
+exports.Pawn = class Pawn extends Piece
   move: (startSquare, endSquare, cb) ->
     if @validMove(startSquare, endSquare)
       return cb(true)
@@ -88,7 +80,7 @@ window.Pawn = class Pawn extends Piece
 
     return sqs
 
-window.Rook = class Rook extends Piece
+exports.Rook = class Rook extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
@@ -99,7 +91,7 @@ window.Rook = class Rook extends Piece
 
 
 
-window.Knight = class Knight extends Piece
+exports.Knight = class Knight extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
@@ -129,7 +121,7 @@ window.Knight = class Knight extends Piece
         sqs.push board[coord.x][coord.y]
     return sqs
 
-window.Bishop = class Bishop extends Piece
+exports.Bishop = class Bishop extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
@@ -142,7 +134,7 @@ window.Bishop = class Bishop extends Piece
   getThreatenedSquares: (board, x, y) ->
     return getDiagonalThreat(board, x, y)
 
-window.King = class King extends Piece
+exports.King = class King extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)
@@ -179,7 +171,7 @@ window.King = class King extends Piece
         sqs.push board[coord.x][coord.y]
     return sqs
 
-window.Queen = class Queen extends Piece
+exports.Queen = class Queen extends Piece
   validMove: (startSquare, endSquare) ->
     # return false unless the move passes generic move checking
     return false unless super(startSquare, endSquare)

@@ -22,11 +22,11 @@
   })();
 
   window.Piece = Piece = (function() {
-    function Piece(color, text, placed) {
-      this.color = color;
-      this.text = text;
-      this.placed = placed;
-      this.graphic = "img/" + text + "_" + color + ".png";
+    function Piece(params) {
+      this.color = params.color;
+      this.text = params.text;
+      this.placed = params.placed;
+      this.graphic = "../img/" + this.text + "_" + this.color + ".png";
       this.name = "" + this.color + " " + this.text;
     }
 
@@ -63,6 +63,13 @@
       _ref = Pawn.__super__.constructor.apply(this, arguments);
       return _ref;
     }
+
+    Pawn.prototype.move = function(startSquare, endSquare, cb) {
+      if (this.validMove(startSquare, endSquare)) {
+        return cb(true);
+      }
+      return cb(false);
+    };
 
     Pawn.prototype.validMove = function(startSquare, endSquare) {
       var dir, homeRow;

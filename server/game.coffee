@@ -1,93 +1,6 @@
-window.Game = window.Game or {}
-
-# socket io vars
-serverBaseUrl = document.domain
-socket = io.connect serverBaseUrl
-sessionId = ''
-
-# constants
-COLORS =
-  red: "#e74c3c"
-  dark: "#34495e"
-  light: "#95a5a6"
-  green: "#27ae60"
-#squareSize = 70
-squareSize = 50
-
-# global game vars
-boards =
-  one: {} 
-  two: {} 
-
-playerGameNum = 'unknown'
-playerColor = undefined
-
-oCanvas.domReady ()->
-  init()
-
-getRoomId = () ->
-  url = document.URL.split("/")
-  return url[url.length - 1]
-
-
-init = () ->
-  # make two canvases, one for each board
-  for boardNum in ["one", "two"]
-    canvas = oCanvas.create {canvas: "#board-#{boardNum}", background: COLORS.green}
-    canvas.height = 8 * squareSize;
-    canvas.width = 12 * squareSize; 
-    boards[boardNum].canvas = canvas
-
-  # get game id
-  roomId = getRoomId()
-  console.log "connected to game #{roomId}"
-
-  # create socket io listeners
-  socket.on 'connect', () ->
-    sessionId = socket.socket.sessionid
-    console.log "sessionId #{sessionId}"
-    socket.emit 'newUser', {id: sessionId, name: "player"}
-    # connect to the game, get the board state, and render the board
-    $.get "/game/player/info/#{sessionId}", handleConnectResponse
-
-  ###
-  socket.on 'newMove', (moveInfo) ->
-    return if moveInfo.player is sessionId
-    start = moveInfo.startSquare
-    end = moveInfo.endSquare
-    console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
-    game = games[moveInfo.gameId]
-    startSquare = game.board[start[0]][start[1]]
-    endSquare = game.board[end[0]][end[1]]
-    game.moveSuccess startSquare.piece.displayObject, startSquare, endSquare
-
-  socket.on 'newDrop', (dropInfo) ->
-    return if dropInfo.player is sessionId
-    end = dropInfo.endSquare
-    console.log "new incoming drop #{dropInfo.piece} on #{end}"
-    game = games[dropInfo.gameId]
-    endSquare = game.board[end[0]][end[1]]
-    game.dropSuccess game.getUnplacedPieceIndex(dropInfo.piece), endSquare
-
-  socket.on 'transferPiece', (pieceInfo) ->
-    console.log "transfer piece"
-    console.log pieceInfo
-    targetGame = if pieceInfo.gameId is 'one' then 'two' else 'one'
-    #if playerColor is pieceInfo.color and playerGameNum is targetGame 
-    games[targetGame].addPieceToGame(pieceInfo)
-  ###
-handleConnectResponse = (resp) ->
-  playerColor = resp.color
-  playerGameNum = resp.gameNum
-  $('#player-label').text "You are #{playerColor} on board #{playerGameNum}" 
-
-  # get board state of the game
-  roomId = getRoomId()
-  $.get "/game/status/#{roomId}", (resp) ->
-    boards.one.board = new Board(resp.boards.one, "white", boards.one.canvas, "one")
-    boards.two.board = new Board(resp.boards.two, "white", boards.two.canvas, "two")
-
-class Board
+gs = require "./gameclasses"
+exports.ChessGame =
+class ChessGame
   # allows array indexing by square coordinates
   A: 7
   B: 6
@@ -97,69 +10,74 @@ class Board
   F: 2
   G: 1
   H: 0
-
-  # vars for piece movement
-  startSquare: undefined
-  startX: undefined
-  startY: undefined
-  endSquare: undefined
-  dragLock: false
-  check: false
-
-  # canvas and dom vars
-  canvas: undefined
-  boardSquares: []
-
-  # game vars
-  board: undefined
-  playerColor: undefined
   whitesTurn: true
 
-  constructor: (boardParams, @playerColor, @canvas, @gameId) ->
-    @createBoard(boardParams)
-    @drawPieces()
-    canvas.redraw()
-    ###
+  constructor: (@gameId) ->
+    @board = @createBoard()
     @calculateThreat()
     @unplacedPieces = []
-    ###
 
-  createBoard: (boardParams) ->
-    # cache the game state from the server
-    boardState = boardParams.board
-    unplacedPieces = boardParams.unplacedPieces
+  getGameId: () ->
+    return @gameId
 
+  getBoard: () ->
+    return @board
+
+  createBoard: () ->
     # letters A - H
     letters = (String.fromCharCode(letter) for letter in [72..65])
-
-    # copy over the board and pieces into local Class objects
-    @board = ((new window.Square("#{letter}#{num}", num, letter) for num in [1..8]) for letter in letters)
+    board = ((new gs.Square("#{letter}#{num}", num, letter) for num in [1..8]) for letter in letters)
     for y in [0..7]
       for x in [0..7]
-        @board[x][y].x = x
-        @board[x][y].y = y
-        @board[x][y].graphic = @createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then COLORS.light else COLORS.dark)
-        @board[x][y].threat = boardState[x][y].threat
-        @board[x][y].threats = boardState[x][y].threats
-        pieceParams = boardState[x][y].piece
-        if pieceParams? 
-          type = pieceParams.text
-          if type is "pawn"
-            console.log "pawn at #{x}, #{y}"
-            @board[x][y].piece = new window.Pawn(pieceParams)
-          else if type is "knight"
-            @board[x][y].piece = new window.Knight(pieceParams)
-          else if type is "bishop"
-            @board[x][y].piece = new window.Bishop(pieceParams)
-          else if type is "rook"
-            @board[x][y].piece = new window.Rook(pieceParams)
-          else if type is "king"
-            @board[x][y].piece = new window.King(pieceParams)
-          else if type is "queen"
-            @board[x][y].piece = new window.Queen(pieceParams)
+        board[x][y].x = x
+        board[x][y].y = y
 
+    #board[3][6].piece = new window.Pawn("white", "pawn", true)
+    ## Create pieces
+    # Rows of pawns
+    for col in [0..7]
+      board[col][1].piece = new gs.Pawn("white", "pawn", true)
+      board[col][6].piece = new gs.Pawn("black", "pawn", true)
+
+    # Rooks
+    board[@A][0].piece = new gs.Rook("white", "rook", true)
+    board[@H][0].piece = new gs.Rook("white", "rook", true)
+    board[@A][7].piece = new gs.Rook("black", "rook", true)
+    board[@H][7].piece = new gs.Rook("black", "rook", true)
+
+    # Knights 
+    board[@B][0].piece = new gs.Knight("white", "knight", true)
+    board[@G][0].piece = new gs.Knight("white", "knight", true)
+    board[@B][7].piece = new gs.Knight("black", "knight", true)
+    board[@G][7].piece = new gs.Knight("black", "knight", true)
+    
+    # Bishops
+    board[@C][0].piece = new gs.Bishop("white", "bishop", true)
+    board[@F][0].piece = new gs.Bishop("white", "bishop", true)
+    board[@C][7].piece = new gs.Bishop("black", "bishop", true)
+    board[@F][7].piece = new gs.Bishop("black", "bishop", true)
+
+    # Kings
+    board[@E][0].piece = new gs.King("white", "king", true)
+    board[@E][7].piece = new gs.King("black", "king", true)
+
+    # Queens 
+    board[@D][0].piece = new gs.Queen("white", "queen", true)
+    board[@D][7].piece = new gs.Queen("black", "queen", true)
+
+    return board
+
+    # couple each board square with a canvas object
+    ###
+    for x in [0..7]
+      for y in [0..7]
+        board[x][y].graphic = @createRectangle(x * squareSize, y * squareSize, if (y + x) % 2 == 0 then COLORS.light else COLORS.dark)
+    return board
+    ###
+
+  ###
   # create canvas squares
-  createRectangle: (x, y, color) ->
+  createRectangle: (x, y, color) =>
     rectangle = @canvas.display.rectangle( {
       x: x,
       y: y,
@@ -253,8 +171,6 @@ class Board
       console.log piece
       return
 
-  ###
-
   getUnplacedPieceIndex: (pieceName) =>
     for i in [0...@unplacedPieces.length]
       console.log "compare: "
@@ -263,7 +179,6 @@ class Board
       console.log pieceName
       if @unplacedPieces[i].name is pieceName
         return i
-  ###
 
   drawPieces: (canvas, board) =>
     for x in [0..7]
@@ -294,14 +209,13 @@ class Board
             that.undrawThreat @
 
           # define drag and drop behavior
+          instance = @
           img.dragAndDrop 
             start: () ->
-              that.pickUpPiece @
+              instance.pickUpPiece @
 
             end: () ->
-              that.dropPiece @
-
-  ###
+              instance.dropPiece @
 
   drawUnplacedPieces: () =>
     for piece in @unplacedPieces
@@ -327,7 +241,6 @@ class Board
           instance.dropPiece @
 
 
-###
   resetBoardColor: () =>
     for y in [0..7]
       for x in [0..7]
@@ -335,6 +248,7 @@ class Board
           @board[x][y].graphic.fill = COLORS.light
         else
           @board[x][y].graphic.fill = COLORS.dark
+
 
   # given an oCanvas image object, set the color of its square
   setSquareColorForImg: (img, color) ->
@@ -347,6 +261,8 @@ class Board
     for sq in threatenedSqs
       sq?.graphic.fill = color or if (sq.y + sq.x) % 2 == 0 then COLORS.light else COLORS.dark
 
+
+  # TODO validate move serverside; check for authenticity client side
   moveSuccess: (displayObj, startSquare, endSquare, movedBySelf) =>
     if not displayObj?
       console.log "invalid displayObj: #{displayObj}"
@@ -388,8 +304,6 @@ class Board
     @dragLock = false
     @canvas.redraw()
     @toggleTurn()
-
-  ###
 
   drawPromoteDialog: (color, endSquare) =>
     width = 4 * squareSize;
@@ -480,7 +394,7 @@ class Board
     @calculateThreat()
     @canvas.redraw()
     @toggleTurn()
-  ###
+
 
   toggleTurn: () ->
     @whitesTurn = not @whitesTurn
@@ -495,7 +409,6 @@ class Board
     # check for check(mate) for the player whose turn it just became
     @check = @checkForCheck()
 
-  ###
   isCheckRemoved: () ->
     if not @check
       console.log "player is not in check to begin with!"
@@ -537,6 +450,7 @@ class Board
     for x in [0..7]
       for y in [0..7]
         @setSquareColorForImg @board[x][y].graphic
+  ###
 
   calculateThreat: () =>
     # reset threat for each square
@@ -552,16 +466,14 @@ class Board
           threatenedSquares = piece.getThreatenedSquares(@board, x, y)
           for sq in threatenedSquares
             sq.threats.push piece
-  ###
 
+  ###
   sendMove: (startSquare, endSquare) =>
-    roomId = getRoomId()
     pieceName = startSquare.piece?.text
     if not pieceName?
       console.log "Cannot send move if start square is empty"
       return
     moveInfo =
-      roomId: roomId
       player: sessionId
       piece: pieceName
       startSquare: [startSquare.x, startSquare.y]
@@ -569,7 +481,6 @@ class Board
       gameId: @gameId
     socket.emit('newMove', moveInfo)
 
-  ###
   sendDrop: (index, endSquare) =>
     console.log "send drop"
     console.log "index: #{index}"
@@ -615,7 +526,6 @@ class Board
 
     @unplacedPieces.push piece
     @drawUnplacedPieces()
-  ###
 
   isObstructed: (startSquare, endSquare, board) =>
     # vertical rank check
@@ -656,3 +566,5 @@ class Board
         return true if @board[xRange[i]][yRange[i]].piece?
 
     return false
+
+  ###

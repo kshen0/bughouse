@@ -6,8 +6,15 @@ app = express()
 http = require("http").createServer(app)
 _ = require "underscore"
 io = require("socket.io").listen(http)
+{ChessGame} = require "./server/game"
 
 participants = {} 
+games = {}
+
+## testing only
+games =
+  12345: {one: new ChessGame("one"), two: new ChessGame("two")}
+
 
 # Server config
 app.set "ipaddr", "127.0.0.1"
@@ -33,8 +40,20 @@ app.post "/message", (request, response) ->
   io.sockets.emit "incomingMessage", {message: message, name: name}
   response.json 200, {message: "Message received"}
 
-app.get "/game", (request, response) ->
+app.get "/game/create", (request, response) ->
+  id = Math.floor(Math.random() * 10000)
+  while id of games 
+    id = Math.floor(Math.random() * 10000)
+  games[id] =
+    one: new ChessGame("one")
+    two: new ChessGame("two")
+  response.redirect "/game/#{id}" 
+
+app.get "/game/:id", (request, response) ->
   response.render "game"
+
+app.get "/game/status/:id", (request, response) ->
+  response.send {boards: games[request.params.id]}
 
 app.get "/game/player/info/:sessionId", (request, response) ->
   sessionId = request.params.sessionId
@@ -64,6 +83,9 @@ io.on "connection", (socket) ->
 
   socket.on "newMove", (moveInfo) ->
     # TODO validate move
+    console.log "new move received"
+    console.log moveInfo
+
     player = participants[moveInfo.player]
     if not player?
       console.log "invalid player id: #{moveInfo.player}"
@@ -72,6 +94,18 @@ io.on "connection", (socket) ->
     if player.gameNum isnt moveInfo.gameId
       console.log "player #{moveInfo.player} cannot make moves on board #{moveInfo.gameId}" 
       return
+
+    roomId = moveInfo.roomId
+    gameId = moveInfo.gameId
+    start = moveInfo.startSquare
+    end = moveInfo.endSquare
+
+    board = games[roomId][gameId].board
+    startSq = board[start[0]][start[1]]
+    endSq = board[end[0]][end[1]]
+    endSq.piece = startSq.piece
+    startSq.piece = undefined
+
 
     io.sockets.emit "newMove", moveInfo
 
