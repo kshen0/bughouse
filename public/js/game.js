@@ -185,9 +185,12 @@
     }
 
     Board.prototype.createBoard = function(boardParams) {
-      var boardState, letter, letters, num, pieceParams, type, unplacedPiece, x, y, _i, _j, _len, _ref, _results;
+      var boardState, letter, letters, num, pieceParams, turnLabel, type, unplacedPiece, x, y, _i, _j, _len, _ref, _results;
       boardState = boardParams.board;
       console.log(boardParams);
+      this.whitesTurn = boardParams.whitesTurn;
+      turnLabel = this.whitesTurn ? "White's turn" : "Black's turn";
+      $("#turn-label-" + this.gameId).html(turnLabel);
       _ref = boardParams.unplacedPieces;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         unplacedPiece = _ref[_i];
@@ -650,9 +653,9 @@
     Board.prototype.toggleTurn = function() {
       this.whitesTurn = !this.whitesTurn;
       if (this.whitesTurn) {
-        $('#turn-label').text("White's turn");
+        $("#turn-label-" + this.gameId).text("White's turn");
       } else {
-        $('#turn-label').text("Black's turn");
+        $("#turn-label-" + this.gameId).text("Black's turn");
       }
       this.calculateThreat();
       this.resetColors();

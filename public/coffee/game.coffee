@@ -132,6 +132,9 @@ class Board
     # cache the game state from the server
     boardState = boardParams.board
     console.log boardParams
+    @whitesTurn = boardParams.whitesTurn
+    turnLabel = if @whitesTurn then "White's turn" else "Black's turn"
+    $("#turn-label-#{@gameId}").html turnLabel
 
     for unplacedPiece in boardParams.unplacedPieces
       type = unplacedPiece.text
@@ -501,9 +504,9 @@ class Board
   toggleTurn: () ->
     @whitesTurn = not @whitesTurn
     if @whitesTurn
-      $('#turn-label').text "White's turn"
+      $("#turn-label-#{@gameId}").text "White's turn"
     else
-      $('#turn-label').text "Black's turn"
+      $("#turn-label-#{@gameId}").text "Black's turn"
 
     # recalculate threat for all pieces and squares on the board
     @calculateThreat()

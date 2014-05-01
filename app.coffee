@@ -53,7 +53,11 @@ app.get "/game/:id", (request, response) ->
   response.render "game"
 
 app.get "/game/status/:id", (request, response) ->
-  response.send {boards: games[request.params.id]}
+  boardParams = games[request.params.id]
+  boardParams.one.whitesTurn = boardParams.one.getWhitesTurn()
+  boardParams.two.whitesTurn = boardParams.two.getWhitesTurn()
+  console.log boardParams
+  response.send {boards: boardParams}
 
 app.get "/game/player/info/:sessionId", (request, response) ->
   sessionId = request.params.sessionId
@@ -106,6 +110,8 @@ io.on "connection", (socket) ->
     endSq.piece = startSq.piece
     startSq.piece = undefined
 
+    games[roomId][gameId].toggleTurn()
+
 
     io.sockets.emit "newMove", moveInfo
 
@@ -123,6 +129,10 @@ io.on "connection", (socket) ->
     console.log "new drop"
     console.log moveInfo
 
+    roomId = moveInfo.roomId
+    gameId = moveInfo.gameId
+    games[roomId][gameId].toggleTurn()
+
     io.sockets.emit "newDrop", moveInfo
 
   socket.on "capturePiece", (capture) ->
@@ -135,21 +145,6 @@ io.on "connection", (socket) ->
 
     board = games[roomId][targetGameId]
     board.unplacedPieces.push capture
-    ###
-    type = piece.split(" ")[1]
-    if type is "pawn"
-      board.unplacedPieces.push new window.Pawn(capture)
-    else if type is "knight"
-      board.unplacedPieces.push new window.Knight(capture)
-    else if type is "bishop"
-      board.unplacedPieces.push new window.Bishop(capture)
-    else if type is "rook"
-      board.unplacedPieces.push new window.Rook(capture)
-    else if type is "king"
-      board.unplacedPieces.push new window.King(capture)
-    else if type is "queen"
-      board.unplacedPieces.push new window.Queen(capture)
-    ###
     io.sockets.emit "transferPiece", { gameId: gameId, piece: piece, color: capture.color }
 
 ###

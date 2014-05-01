@@ -17,6 +17,9 @@ class ChessGame
     @calculateThreat()
     @unplacedPieces = []
 
+  getWhitesTurn: () ->
+    return @whitesTurn
+
   getGameId: () ->
     return @gameId
 
@@ -394,20 +397,13 @@ class ChessGame
     @calculateThreat()
     @canvas.redraw()
     @toggleTurn()
+  ###
 
 
   toggleTurn: () ->
     @whitesTurn = not @whitesTurn
-    if @whitesTurn
-      $('#turn-label').text "White's turn"
-    else
-      $('#turn-label').text "Black's turn"
 
-    # recalculate threat for all pieces and squares on the board
-    @calculateThreat()
-    @resetColors()
-    # check for check(mate) for the player whose turn it just became
-    @check = @checkForCheck()
+  ###
 
   isCheckRemoved: () ->
     if not @check
