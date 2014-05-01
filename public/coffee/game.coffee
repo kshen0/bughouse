@@ -50,13 +50,13 @@ init = () ->
     # connect to the game, get the board state, and render the board
     $.get "/game/player/info/#{sessionId}", handleConnectResponse
 
-  ###
   socket.on 'newMove', (moveInfo) ->
     return if moveInfo.player is sessionId
+    return if getRoomId() isnt moveInfo.roomId
     start = moveInfo.startSquare
     end = moveInfo.endSquare
     console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
-    game = games[moveInfo.gameId]
+    game = boards[moveInfo.gameId].board
     startSquare = game.board[start[0]][start[1]]
     endSquare = game.board[end[0]][end[1]]
     game.moveSuccess startSquare.piece.displayObject, startSquare, endSquare
@@ -65,7 +65,7 @@ init = () ->
     return if dropInfo.player is sessionId
     end = dropInfo.endSquare
     console.log "new incoming drop #{dropInfo.piece} on #{end}"
-    game = games[dropInfo.gameId]
+    game = boards[dropInfo.gameId]
     endSquare = game.board[end[0]][end[1]]
     game.dropSuccess game.getUnplacedPieceIndex(dropInfo.piece), endSquare
 
@@ -74,8 +74,9 @@ init = () ->
     console.log pieceInfo
     targetGame = if pieceInfo.gameId is 'one' then 'two' else 'one'
     #if playerColor is pieceInfo.color and playerGameNum is targetGame 
-    games[targetGame].addPieceToGame(pieceInfo)
-  ###
+    console.log boards
+    boards[targetGame].board.addPieceToGame(pieceInfo)
+
 handleConnectResponse = (resp) ->
   playerColor = resp.color
   playerGameNum = resp.gameNum
@@ -84,8 +85,12 @@ handleConnectResponse = (resp) ->
   # get board state of the game
   roomId = getRoomId()
   $.get "/game/status/#{roomId}", (resp) ->
-    boards.one.board = new Board(resp.boards.one, "white", boards.one.canvas, "one")
-    boards.two.board = new Board(resp.boards.two, "white", boards.two.canvas, "two")
+    if playerGameNum is 'one'
+      boards.one.board = new Board(resp.boards.one, playerColor, boards.one.canvas, "one")
+      boards.two.board = new Board(resp.boards.two, 'spectator', boards.two.canvas, "two")
+    else if playerGameNum is 'two'
+      boards.one.board = new Board(resp.boards.one, 'spectator', boards.one.canvas, "one")
+      boards.two.board = new Board(resp.boards.two, playerColor, boards.two.canvas, "two")
 
 class Board
   # allows array indexing by square coordinates
@@ -116,18 +121,33 @@ class Board
   whitesTurn: true
 
   constructor: (boardParams, @playerColor, @canvas, @gameId) ->
+    @unplacedPieces = []
     @createBoard(boardParams)
     @drawPieces()
+    @drawUnplacedPieces()
     canvas.redraw()
-    ###
     @calculateThreat()
-    @unplacedPieces = []
-    ###
 
   createBoard: (boardParams) ->
     # cache the game state from the server
     boardState = boardParams.board
-    unplacedPieces = boardParams.unplacedPieces
+    console.log boardParams
+
+    for unplacedPiece in boardParams.unplacedPieces
+      type = unplacedPiece.text
+      if type is "pawn"
+        console.log "pawn unplaced"
+        @unplacedPieces.push new window.Pawn(unplacedPiece)
+      else if type is "knight"
+        @unplacedPieces.push new window.Knight(unplacedPiece)
+      else if type is "bishop"
+        @unplacedPieces.push new window.Bishop(unplacedPiece)
+      else if type is "rook"
+        @unplacedPieces.push new window.Rook(unplacedPiece)
+      else if type is "king"
+        @unplacedPieces.push new window.King(unplacedPiece)
+      else if type is "queen"
+        @unplacedPieces.push new window.Queen(unplacedPiece)
 
     # letters A - H
     letters = (String.fromCharCode(letter) for letter in [72..65])
@@ -145,7 +165,6 @@ class Board
         if pieceParams? 
           type = pieceParams.text
           if type is "pawn"
-            console.log "pawn at #{x}, #{y}"
             @board[x][y].piece = new window.Pawn(pieceParams)
           else if type is "knight"
             @board[x][y].piece = new window.Knight(pieceParams)
@@ -247,6 +266,7 @@ class Board
       else
         # TODO: cannot place pawn on either back rank 
         # TODO: cannot place checkmate
+        console.log @
         @dropSuccess(@getUnplacedPieceIndex(piece.name), @endSquare, true)
     else
       console.log "unhandled piece state"
@@ -301,8 +321,6 @@ class Board
             end: () ->
               that.dropPiece @
 
-  ###
-
   drawUnplacedPieces: () =>
     for piece in @unplacedPieces
       img = @canvas.display.image({
@@ -326,8 +344,6 @@ class Board
         end: () ->
           instance.dropPiece @
 
-
-###
   resetBoardColor: () =>
     for y in [0..7]
       for x in [0..7]
@@ -363,9 +379,12 @@ class Board
       if movedBySelf
         # lol security
         socket.emit 'capturePiece', 
-          gameId: @gameId
+          roomId: getRoomId()
+          gameId: @gameId 
           piece: capturedPiece.name
           color: capturedPiece.color
+          text: capturedPiece.text
+          placed: false
 
 
     # move piece from start square to end square
@@ -388,8 +407,6 @@ class Board
     @dragLock = false
     @canvas.redraw()
     @toggleTurn()
-
-  ###
 
   drawPromoteDialog: (color, endSquare) =>
     width = 4 * squareSize;
@@ -480,7 +497,6 @@ class Board
     @calculateThreat()
     @canvas.redraw()
     @toggleTurn()
-  ###
 
   toggleTurn: () ->
     @whitesTurn = not @whitesTurn
@@ -495,7 +511,6 @@ class Board
     # check for check(mate) for the player whose turn it just became
     @check = @checkForCheck()
 
-  ###
   isCheckRemoved: () ->
     if not @check
       console.log "player is not in check to begin with!"
@@ -552,7 +567,6 @@ class Board
           threatenedSquares = piece.getThreatenedSquares(@board, x, y)
           for sq in threatenedSquares
             sq.threats.push piece
-  ###
 
   sendMove: (startSquare, endSquare) =>
     roomId = getRoomId()
@@ -569,7 +583,6 @@ class Board
       gameId: @gameId
     socket.emit('newMove', moveInfo)
 
-  ###
   sendDrop: (index, endSquare) =>
     console.log "send drop"
     console.log "index: #{index}"
@@ -586,6 +599,7 @@ class Board
       piece: "#{pieceColor} #{pieceName}"
       endSquare: [endSquare.x, endSquare.y]
       gameId: @gameId
+      roomId: getRoomId()
 
     socket.emit 'newDrop', dropInfo
 
@@ -600,22 +614,26 @@ class Board
     color = colorAndType[0]
     type = colorAndType[1]
 
+    pieceParams =
+      color: color
+      text: type
+      placed: false
+
     if type is "pawn"
-      piece = new window.Pawn(color, type, false)
+      piece = new window.Pawn(pieceParams)
     if type is "rook"
-      piece = new window.Pawn(color, type, false)
+      piece = new window.Pawn(pieceParams)
     if type is "knight"
-      piece = new window.Pawn(color, type, false)
+      piece = new window.Pawn(pieceParams)
     if type is "bishop"
-      piece = new window.Pawn(color, type, false)
+      piece = new window.Pawn(pieceParams)
     if type is "queen"
-      piece = new window.Pawn(color, type, false)
+      piece = new window.Pawn(pieceParams)
 
     return unless piece?
 
     @unplacedPieces.push piece
     @drawUnplacedPieces()
-  ###
 
   isObstructed: (startSquare, endSquare, board) =>
     # vertical rank check

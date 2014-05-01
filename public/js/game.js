@@ -54,7 +54,7 @@
     }
     roomId = getRoomId();
     console.log("connected to game " + roomId);
-    return socket.on('connect', function() {
+    socket.on('connect', function() {
       sessionId = socket.socket.sessionid;
       console.log("sessionId " + sessionId);
       socket.emit('newUser', {
@@ -63,33 +63,41 @@
       });
       return $.get("/game/player/info/" + sessionId, handleConnectResponse);
     });
-    /*
-    socket.on 'newMove', (moveInfo) ->
-      return if moveInfo.player is sessionId
-      start = moveInfo.startSquare
-      end = moveInfo.endSquare
-      console.log "new incoming move #{moveInfo.piece} #{start}-#{end}"
-      game = games[moveInfo.gameId]
-      startSquare = game.board[start[0]][start[1]]
-      endSquare = game.board[end[0]][end[1]]
-      game.moveSuccess startSquare.piece.displayObject, startSquare, endSquare
-    
-    socket.on 'newDrop', (dropInfo) ->
-      return if dropInfo.player is sessionId
-      end = dropInfo.endSquare
-      console.log "new incoming drop #{dropInfo.piece} on #{end}"
-      game = games[dropInfo.gameId]
-      endSquare = game.board[end[0]][end[1]]
-      game.dropSuccess game.getUnplacedPieceIndex(dropInfo.piece), endSquare
-    
-    socket.on 'transferPiece', (pieceInfo) ->
-      console.log "transfer piece"
-      console.log pieceInfo
-      targetGame = if pieceInfo.gameId is 'one' then 'two' else 'one'
-      #if playerColor is pieceInfo.color and playerGameNum is targetGame 
-      games[targetGame].addPieceToGame(pieceInfo)
-    */
-
+    socket.on('newMove', function(moveInfo) {
+      var end, endSquare, game, start, startSquare;
+      if (moveInfo.player === sessionId) {
+        return;
+      }
+      if (getRoomId() !== moveInfo.roomId) {
+        return;
+      }
+      start = moveInfo.startSquare;
+      end = moveInfo.endSquare;
+      console.log("new incoming move " + moveInfo.piece + " " + start + "-" + end);
+      game = boards[moveInfo.gameId].board;
+      startSquare = game.board[start[0]][start[1]];
+      endSquare = game.board[end[0]][end[1]];
+      return game.moveSuccess(startSquare.piece.displayObject, startSquare, endSquare);
+    });
+    socket.on('newDrop', function(dropInfo) {
+      var end, endSquare, game;
+      if (dropInfo.player === sessionId) {
+        return;
+      }
+      end = dropInfo.endSquare;
+      console.log("new incoming drop " + dropInfo.piece + " on " + end);
+      game = boards[dropInfo.gameId];
+      endSquare = game.board[end[0]][end[1]];
+      return game.dropSuccess(game.getUnplacedPieceIndex(dropInfo.piece), endSquare);
+    });
+    return socket.on('transferPiece', function(pieceInfo) {
+      var targetGame;
+      console.log("transfer piece");
+      console.log(pieceInfo);
+      targetGame = pieceInfo.gameId === 'one' ? 'two' : 'one';
+      console.log(boards);
+      return boards[targetGame].board.addPieceToGame(pieceInfo);
+    });
   };
 
   handleConnectResponse = function(resp) {
@@ -99,8 +107,13 @@
     $('#player-label').text("You are " + playerColor + " on board " + playerGameNum);
     roomId = getRoomId();
     return $.get("/game/status/" + roomId, function(resp) {
-      boards.one.board = new Board(resp.boards.one, "white", boards.one.canvas, "one");
-      return boards.two.board = new Board(resp.boards.two, "white", boards.two.canvas, "two");
+      if (playerGameNum === 'one') {
+        boards.one.board = new Board(resp.boards.one, playerColor, boards.one.canvas, "one");
+        return boards.two.board = new Board(resp.boards.two, 'spectator', boards.two.canvas, "two");
+      } else if (playerGameNum === 'two') {
+        boards.one.board = new Board(resp.boards.one, 'spectator', boards.one.canvas, "one");
+        return boards.two.board = new Board(resp.boards.two, playerColor, boards.two.canvas, "two");
+      }
     });
   };
 
@@ -148,45 +161,69 @@
       this.canvas = canvas;
       this.gameId = gameId;
       this.isObstructed = __bind(this.isObstructed, this);
+      this.addPieceToGame = __bind(this.addPieceToGame, this);
+      this.sendDrop = __bind(this.sendDrop, this);
       this.sendMove = __bind(this.sendMove, this);
+      this.calculateThreat = __bind(this.calculateThreat, this);
+      this.dropSuccess = __bind(this.dropSuccess, this);
+      this.createPiece = __bind(this.createPiece, this);
+      this.drawPromoteDialog = __bind(this.drawPromoteDialog, this);
       this.moveSuccess = __bind(this.moveSuccess, this);
       this.resetBoardColor = __bind(this.resetBoardColor, this);
+      this.drawUnplacedPieces = __bind(this.drawUnplacedPieces, this);
       this.drawPieces = __bind(this.drawPieces, this);
       this.dropPiece = __bind(this.dropPiece, this);
       this.pickUpPiece = __bind(this.pickUpPiece, this);
       this.undrawThreat = __bind(this.undrawThreat, this);
       this.drawThreat = __bind(this.drawThreat, this);
+      this.unplacedPieces = [];
       this.createBoard(boardParams);
       this.drawPieces();
+      this.drawUnplacedPieces();
       canvas.redraw();
-      /*
-      @calculateThreat()
-      @unplacedPieces = []
-      */
-
+      this.calculateThreat();
     }
 
     Board.prototype.createBoard = function(boardParams) {
-      var boardState, letter, letters, num, pieceParams, type, unplacedPieces, x, y, _i, _results;
+      var boardState, letter, letters, num, pieceParams, type, unplacedPiece, x, y, _i, _j, _len, _ref, _results;
       boardState = boardParams.board;
-      unplacedPieces = boardParams.unplacedPieces;
+      console.log(boardParams);
+      _ref = boardParams.unplacedPieces;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        unplacedPiece = _ref[_i];
+        type = unplacedPiece.text;
+        if (type === "pawn") {
+          console.log("pawn unplaced");
+          this.unplacedPieces.push(new window.Pawn(unplacedPiece));
+        } else if (type === "knight") {
+          this.unplacedPieces.push(new window.Knight(unplacedPiece));
+        } else if (type === "bishop") {
+          this.unplacedPieces.push(new window.Bishop(unplacedPiece));
+        } else if (type === "rook") {
+          this.unplacedPieces.push(new window.Rook(unplacedPiece));
+        } else if (type === "king") {
+          this.unplacedPieces.push(new window.King(unplacedPiece));
+        } else if (type === "queen") {
+          this.unplacedPieces.push(new window.Queen(unplacedPiece));
+        }
+      }
       letters = (function() {
-        var _i, _results;
+        var _j, _results;
         _results = [];
-        for (letter = _i = 72; _i >= 65; letter = --_i) {
+        for (letter = _j = 72; _j >= 65; letter = --_j) {
           _results.push(String.fromCharCode(letter));
         }
         return _results;
       })();
       this.board = (function() {
-        var _i, _len, _results;
+        var _j, _len1, _results;
         _results = [];
-        for (_i = 0, _len = letters.length; _i < _len; _i++) {
-          letter = letters[_i];
+        for (_j = 0, _len1 = letters.length; _j < _len1; _j++) {
+          letter = letters[_j];
           _results.push((function() {
-            var _j, _results1;
+            var _k, _results1;
             _results1 = [];
-            for (num = _j = 1; _j <= 8; num = ++_j) {
+            for (num = _k = 1; _k <= 8; num = ++_k) {
               _results1.push(new window.Square("" + letter + num, num, letter));
             }
             return _results1;
@@ -195,11 +232,11 @@
         return _results;
       })();
       _results = [];
-      for (y = _i = 0; _i <= 7; y = ++_i) {
+      for (y = _j = 0; _j <= 7; y = ++_j) {
         _results.push((function() {
-          var _j, _results1;
+          var _k, _results1;
           _results1 = [];
-          for (x = _j = 0; _j <= 7; x = ++_j) {
+          for (x = _k = 0; _k <= 7; x = ++_k) {
             this.board[x][y].x = x;
             this.board[x][y].y = y;
             this.board[x][y].graphic = this.createRectangle(x * squareSize, y * squareSize, (y + x) % 2 === 0 ? COLORS.light : COLORS.dark);
@@ -209,7 +246,6 @@
             if (pieceParams != null) {
               type = pieceParams.text;
               if (type === "pawn") {
-                console.log("pawn at " + x + ", " + y);
                 _results1.push(this.board[x][y].piece = new window.Pawn(pieceParams));
               } else if (type === "knight") {
                 _results1.push(this.board[x][y].piece = new window.Knight(pieceParams));
@@ -333,6 +369,7 @@
           console.log("cannot place a piece on an occupied square");
           revert();
         } else {
+          console.log(this);
           return this.dropSuccess(this.getUnplacedPieceIndex(piece.name), this.endSquare, true);
         }
       } else {
@@ -409,32 +446,38 @@
       return _results;
     };
 
-    /*
-    
-    drawUnplacedPieces: () =>
-      for piece in @unplacedPieces
-        img = @canvas.display.image({
-          x: squareSize * 8 + squareSize / 2
-          y: squareSize / 2 
-          origin: {x: "center", y: "center"}
-          height: squareSize
-          width: squareSize
+    Board.prototype.drawUnplacedPieces = function() {
+      var img, instance, piece, _i, _len, _ref, _results;
+      _ref = this.unplacedPieces;
+      _results = [];
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        piece = _ref[_i];
+        img = this.canvas.display.image({
+          x: squareSize * 8 + squareSize / 2,
+          y: squareSize / 2,
+          origin: {
+            x: "center",
+            y: "center"
+          },
+          height: squareSize,
+          width: squareSize,
           image: piece.graphic
-        })
-        piece.displayObject = img
-        @canvas.addChild(img)
-        img.piece = piece
-    
-        # define drag and drop behavior
-        instance = @
-        img.dragAndDrop 
-          start: () ->
-            instance.pickUpPiece @
-    
-          end: () ->
-            instance.dropPiece @
-    */
-
+        });
+        piece.displayObject = img;
+        this.canvas.addChild(img);
+        img.piece = piece;
+        instance = this;
+        _results.push(img.dragAndDrop({
+          start: function() {
+            return instance.pickUpPiece(this);
+          },
+          end: function() {
+            return instance.dropPiece(this);
+          }
+        }));
+      }
+      return _results;
+    };
 
     Board.prototype.resetBoardColor = function() {
       var x, y, _i, _results;
@@ -489,9 +532,12 @@
         capturedPiece.displayObject.remove();
         if (movedBySelf) {
           socket.emit('capturePiece', {
+            roomId: getRoomId(),
             gameId: this.gameId,
             piece: capturedPiece.name,
-            color: capturedPiece.color
+            color: capturedPiece.color,
+            text: capturedPiece.text,
+            placed: false
           });
         }
       }
@@ -514,99 +560,92 @@
       return this.toggleTurn();
     };
 
-    /*
-    
-    drawPromoteDialog: (color, endSquare) =>
+    Board.prototype.drawPromoteDialog = function(color, endSquare) {
+      var height, i, pieceName, pieces, rectangle, sprite, that, width, _i, _len;
       width = 4 * squareSize;
       height = 1.5 * squareSize;
-      rectangle = @canvas.display.rectangle( {
+      rectangle = this.canvas.display.rectangle({
         x: squareSize * 4 - width / 2,
         y: squareSize * 4 - height / 2,
         width: width,
         height: height,
-        fill: COLORS.green; 
-      })
-    
-      pieces = ['knight', 'bishop', 'rook', 'queen']
-      for pieceName, i in pieces
-        sprite = @canvas.display.image({
-          x: squareSize * i
-          y: squareSize / 4 
-          origin: {x: "left", y: "left"}
-          height: squareSize
-          width: squareSize
-          image: "img/#{pieceName}_#{color}.png"
-        })
-    
-    
-        that = @
-        console.log "bind #{pieceName}"
-        # TODO: figure out why this always binds the last piece name
-        sprite.bind "click", () ->
-          that.createPiece @, color, endSquare, rectangle
-        rectangle.addChild(sprite)
-    
-      @canvas.addChild(rectangle)
-    
-    createPiece: (eventInfo, color, endSquare, picker) =>
-      filename = eventInfo.img?.src
-      if not filename?
-        console.log "no imagename found in createPiece"
-        return
-    
-      if endSquare.piece?
-        endSquare.piece.displayObject.remove()
-    
-      # sorry not sorry
-      if filename.indexOf('knight') > -1 
-        endSquare.piece = new window.Knight(color, "knight", true)
-      else if filename.indexOf('bishop') > -1 
-        endSquare.piece = new window.Bishop(color, "bishop", true)
-      else if filename.indexOf('rook') > -1 
-        endSquare.piece = new window.Rook(color, "rook", true)
-      else if filename.indexOf('queen') > -1 
-        endSquare.piece = new window.Queen(color, "queen", true)
-    
-      picker.remove()
-    
-      @drawPieces()
-      @canvas.redraw()
-    
-    dropSuccess: (index, endSquare, movedBySelf) =>
-      console.log "dropsuccess"
-    
-      piece = @unplacedPieces[index]
-    
-      if movedBySelf
-        @sendDrop(index, endSquare)
-      @unplacedPieces.splice index, 1
-    
-      displayObj = piece.displayObject
-    
-      console.log "dropping #{piece.name} at #{endSquare.name}"
-    
-      # add the piece to the board 
-      endSquare.piece = piece
-      piece.square = endSquare
-      piece.placed = true 
-    
-      # bind hover listener
-      that = @
-      displayObj.bind "mouseenter", () ->
-        that.drawThreat @
-      displayObj.bind "mouseleave", () ->
-        that.undrawThreat @
-    
-      # update the graphic
-      displayObj.x = (endSquare.x * squareSize) + squareSize / 2
-      displayObj.y = (endSquare.y * squareSize) + squareSize / 2
-    
-      @dragLock = false
-      @calculateThreat()
-      @canvas.redraw()
-      @toggleTurn()
-    */
+        fill: COLORS.green
+      });
+      pieces = ['knight', 'bishop', 'rook', 'queen'];
+      for (i = _i = 0, _len = pieces.length; _i < _len; i = ++_i) {
+        pieceName = pieces[i];
+        sprite = this.canvas.display.image({
+          x: squareSize * i,
+          y: squareSize / 4,
+          origin: {
+            x: "left",
+            y: "left"
+          },
+          height: squareSize,
+          width: squareSize,
+          image: "img/" + pieceName + "_" + color + ".png"
+        });
+        that = this;
+        console.log("bind " + pieceName);
+        sprite.bind("click", function() {
+          return that.createPiece(this, color, endSquare, rectangle);
+        });
+        rectangle.addChild(sprite);
+      }
+      return this.canvas.addChild(rectangle);
+    };
 
+    Board.prototype.createPiece = function(eventInfo, color, endSquare, picker) {
+      var filename, _ref;
+      filename = (_ref = eventInfo.img) != null ? _ref.src : void 0;
+      if (filename == null) {
+        console.log("no imagename found in createPiece");
+        return;
+      }
+      if (endSquare.piece != null) {
+        endSquare.piece.displayObject.remove();
+      }
+      if (filename.indexOf('knight') > -1) {
+        endSquare.piece = new window.Knight(color, "knight", true);
+      } else if (filename.indexOf('bishop') > -1) {
+        endSquare.piece = new window.Bishop(color, "bishop", true);
+      } else if (filename.indexOf('rook') > -1) {
+        endSquare.piece = new window.Rook(color, "rook", true);
+      } else if (filename.indexOf('queen') > -1) {
+        endSquare.piece = new window.Queen(color, "queen", true);
+      }
+      picker.remove();
+      this.drawPieces();
+      return this.canvas.redraw();
+    };
+
+    Board.prototype.dropSuccess = function(index, endSquare, movedBySelf) {
+      var displayObj, piece, that;
+      console.log("dropsuccess");
+      piece = this.unplacedPieces[index];
+      if (movedBySelf) {
+        this.sendDrop(index, endSquare);
+      }
+      this.unplacedPieces.splice(index, 1);
+      displayObj = piece.displayObject;
+      console.log("dropping " + piece.name + " at " + endSquare.name);
+      endSquare.piece = piece;
+      piece.square = endSquare;
+      piece.placed = true;
+      that = this;
+      displayObj.bind("mouseenter", function() {
+        return that.drawThreat(this);
+      });
+      displayObj.bind("mouseleave", function() {
+        return that.undrawThreat(this);
+      });
+      displayObj.x = (endSquare.x * squareSize) + squareSize / 2;
+      displayObj.y = (endSquare.y * squareSize) + squareSize / 2;
+      this.dragLock = false;
+      this.calculateThreat();
+      this.canvas.redraw();
+      return this.toggleTurn();
+    };
 
     Board.prototype.toggleTurn = function() {
       this.whitesTurn = !this.whitesTurn;
@@ -620,65 +659,97 @@
       return this.check = this.checkForCheck();
     };
 
-    /*
-    isCheckRemoved: () ->
-      if not @check
-        console.log "player is not in check to begin with!"
-        return false
-    
-      # temporarily change board to assess check
-      endSqPiece = @endSquare.piece
-      @startSquare.piece.square = @endSquare
-      @endSquare.piece = @startSquare.piece
-      @startSquare.piece = undefined
-      @calculateThreat()
-      newCheck = @checkForCheck()
-    
-      # reset from temporary position
-      @endSquare.piece.square = @startSquare
-      @startSquare.piece = @endSquare.piece
-      @endSquare.piece = endSqPiece
-      @calculateThreat()
-    
-      return newCheck is false
-    
-    checkForCheck: () ->
-      # find king
-      kingSq = undefined
-      colorTurn = if @whitesTurn then "white" else "black"
-      for x in [0..7]
-        for y in [0..7]
-          if @board[x][y].piece?.name is "#{colorTurn} king"
-            kingSq = @board[x][y]
-    
-      for piece in kingSq.threats
-        if piece.color isnt colorTurn
-          console.log "#{colorTurn} is in check"
-          return true
-    
-      return false
-    
-    resetColors: () ->
-      for x in [0..7]
-        for y in [0..7]
-          @setSquareColorForImg @board[x][y].graphic
-    
-    calculateThreat: () =>
-      # reset threat for each square
-      for x in [0..7]
-        for y in [0..7]
-          @board[x][y].threats = []
-    
-      # calculate threat for each piece
-      for x in [0..7]
-        for y in [0..7]
-          piece = @board[x][y].piece
-          if piece?
-            threatenedSquares = piece.getThreatenedSquares(@board, x, y)
-            for sq in threatenedSquares
-              sq.threats.push piece
-    */
+    Board.prototype.isCheckRemoved = function() {
+      var endSqPiece, newCheck;
+      if (!this.check) {
+        console.log("player is not in check to begin with!");
+        return false;
+      }
+      endSqPiece = this.endSquare.piece;
+      this.startSquare.piece.square = this.endSquare;
+      this.endSquare.piece = this.startSquare.piece;
+      this.startSquare.piece = void 0;
+      this.calculateThreat();
+      newCheck = this.checkForCheck();
+      this.endSquare.piece.square = this.startSquare;
+      this.startSquare.piece = this.endSquare.piece;
+      this.endSquare.piece = endSqPiece;
+      this.calculateThreat();
+      return newCheck === false;
+    };
 
+    Board.prototype.checkForCheck = function() {
+      var colorTurn, kingSq, piece, x, y, _i, _j, _k, _len, _ref, _ref1;
+      kingSq = void 0;
+      colorTurn = this.whitesTurn ? "white" : "black";
+      for (x = _i = 0; _i <= 7; x = ++_i) {
+        for (y = _j = 0; _j <= 7; y = ++_j) {
+          if (((_ref = this.board[x][y].piece) != null ? _ref.name : void 0) === ("" + colorTurn + " king")) {
+            kingSq = this.board[x][y];
+          }
+        }
+      }
+      _ref1 = kingSq.threats;
+      for (_k = 0, _len = _ref1.length; _k < _len; _k++) {
+        piece = _ref1[_k];
+        if (piece.color !== colorTurn) {
+          console.log("" + colorTurn + " is in check");
+          return true;
+        }
+      }
+      return false;
+    };
+
+    Board.prototype.resetColors = function() {
+      var x, y, _i, _results;
+      _results = [];
+      for (x = _i = 0; _i <= 7; x = ++_i) {
+        _results.push((function() {
+          var _j, _results1;
+          _results1 = [];
+          for (y = _j = 0; _j <= 7; y = ++_j) {
+            _results1.push(this.setSquareColorForImg(this.board[x][y].graphic));
+          }
+          return _results1;
+        }).call(this));
+      }
+      return _results;
+    };
+
+    Board.prototype.calculateThreat = function() {
+      var piece, sq, threatenedSquares, x, y, _i, _j, _k, _results;
+      for (x = _i = 0; _i <= 7; x = ++_i) {
+        for (y = _j = 0; _j <= 7; y = ++_j) {
+          this.board[x][y].threats = [];
+        }
+      }
+      _results = [];
+      for (x = _k = 0; _k <= 7; x = ++_k) {
+        _results.push((function() {
+          var _l, _results1;
+          _results1 = [];
+          for (y = _l = 0; _l <= 7; y = ++_l) {
+            piece = this.board[x][y].piece;
+            if (piece != null) {
+              threatenedSquares = piece.getThreatenedSquares(this.board, x, y);
+              _results1.push((function() {
+                var _len, _m, _results2;
+                _results2 = [];
+                for (_m = 0, _len = threatenedSquares.length; _m < _len; _m++) {
+                  sq = threatenedSquares[_m];
+                  _results2.push(sq.threats.push(piece));
+                }
+                return _results2;
+              })());
+            } else {
+              _results1.push(void 0);
+            }
+          }
+          return _results1;
+        }).call(this));
+      }
+      return _results;
+    };
 
     Board.prototype.sendMove = function(startSquare, endSquare) {
       var moveInfo, pieceName, roomId, _ref;
@@ -699,54 +770,68 @@
       return socket.emit('newMove', moveInfo);
     };
 
-    /*
-    sendDrop: (index, endSquare) =>
-      console.log "send drop"
-      console.log "index: #{index}"
-      console.log "endsquare: #{endSquare.name}"
-      console.log @unplacedPieces
-      pieceName = @unplacedPieces[index]?.text
-      pieceColor = @unplacedPieces[index]?.color
-      if not pieceName?
-        console.log "Error finding piece to drop"
-        return
-    
-      dropInfo =
-        player: sessionId
-        piece: "#{pieceColor} #{pieceName}"
-        endSquare: [endSquare.x, endSquare.y]
-        gameId: @gameId
-    
-      socket.emit 'newDrop', dropInfo
-    
-    addPieceToGame: (pieceInfo) =>
-      console.log "adding piece to game:"
-      console.log pieceInfo
-    
-      pieceName = pieceInfo.piece
-      return unless pieceName? 
-      colorAndType = pieceName.split " "
-      return unless colorAndType.length is 2
-      color = colorAndType[0]
-      type = colorAndType[1]
-    
-      if type is "pawn"
-        piece = new window.Pawn(color, type, false)
-      if type is "rook"
-        piece = new window.Pawn(color, type, false)
-      if type is "knight"
-        piece = new window.Pawn(color, type, false)
-      if type is "bishop"
-        piece = new window.Pawn(color, type, false)
-      if type is "queen"
-        piece = new window.Pawn(color, type, false)
-    
-      return unless piece?
-    
-      @unplacedPieces.push piece
-      @drawUnplacedPieces()
-    */
+    Board.prototype.sendDrop = function(index, endSquare) {
+      var dropInfo, pieceColor, pieceName, _ref, _ref1;
+      console.log("send drop");
+      console.log("index: " + index);
+      console.log("endsquare: " + endSquare.name);
+      console.log(this.unplacedPieces);
+      pieceName = (_ref = this.unplacedPieces[index]) != null ? _ref.text : void 0;
+      pieceColor = (_ref1 = this.unplacedPieces[index]) != null ? _ref1.color : void 0;
+      if (pieceName == null) {
+        console.log("Error finding piece to drop");
+        return;
+      }
+      dropInfo = {
+        player: sessionId,
+        piece: "" + pieceColor + " " + pieceName,
+        endSquare: [endSquare.x, endSquare.y],
+        gameId: this.gameId,
+        roomId: getRoomId()
+      };
+      return socket.emit('newDrop', dropInfo);
+    };
 
+    Board.prototype.addPieceToGame = function(pieceInfo) {
+      var color, colorAndType, piece, pieceName, pieceParams, type;
+      console.log("adding piece to game:");
+      console.log(pieceInfo);
+      pieceName = pieceInfo.piece;
+      if (pieceName == null) {
+        return;
+      }
+      colorAndType = pieceName.split(" ");
+      if (colorAndType.length !== 2) {
+        return;
+      }
+      color = colorAndType[0];
+      type = colorAndType[1];
+      pieceParams = {
+        color: color,
+        text: type,
+        placed: false
+      };
+      if (type === "pawn") {
+        piece = new window.Pawn(pieceParams);
+      }
+      if (type === "rook") {
+        piece = new window.Pawn(pieceParams);
+      }
+      if (type === "knight") {
+        piece = new window.Pawn(pieceParams);
+      }
+      if (type === "bishop") {
+        piece = new window.Pawn(pieceParams);
+      }
+      if (type === "queen") {
+        piece = new window.Pawn(pieceParams);
+      }
+      if (piece == null) {
+        return;
+      }
+      this.unplacedPieces.push(piece);
+      return this.drawUnplacedPieces();
+    };
 
     Board.prototype.isObstructed = function(startSquare, endSquare, board) {
       var col, i, j, row, slope, xDist, xRange, yDist, yRange, _i, _j, _k, _l, _m, _ref, _ref1, _ref2, _ref3, _ref4, _results, _results1;

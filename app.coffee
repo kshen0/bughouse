@@ -127,9 +127,29 @@ io.on "connection", (socket) ->
 
   socket.on "capturePiece", (capture) ->
     gameId = capture.gameId
+    targetGameId = if gameId is 'one' then 'two' else 'one'
     piece = capture.piece
     console.log "piece captured:"
     console.log capture
+    roomId = capture.roomId
+
+    board = games[roomId][targetGameId]
+    board.unplacedPieces.push capture
+    ###
+    type = piece.split(" ")[1]
+    if type is "pawn"
+      board.unplacedPieces.push new window.Pawn(capture)
+    else if type is "knight"
+      board.unplacedPieces.push new window.Knight(capture)
+    else if type is "bishop"
+      board.unplacedPieces.push new window.Bishop(capture)
+    else if type is "rook"
+      board.unplacedPieces.push new window.Rook(capture)
+    else if type is "king"
+      board.unplacedPieces.push new window.King(capture)
+    else if type is "queen"
+      board.unplacedPieces.push new window.Queen(capture)
+    ###
     io.sockets.emit "transferPiece", { gameId: gameId, piece: piece, color: capture.color }
 
 ###
