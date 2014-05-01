@@ -11,6 +11,7 @@ COLORS =
   dark: "#34495e"
   light: "#95a5a6"
   green: "#27ae60"
+  midnight_blue: "#2c3e50"
 #squareSize = 70
 squareSize = 50
 
@@ -33,7 +34,7 @@ getRoomId = () ->
 init = () ->
   # make two canvases, one for each board
   for boardNum in ["one", "two"]
-    canvas = oCanvas.create {canvas: "#board-#{boardNum}", background: COLORS.green}
+    canvas = oCanvas.create {canvas: "#board-#{boardNum}", background: COLORS.midnight_blue}
     canvas.height = 8 * squareSize;
     canvas.width = 12 * squareSize; 
     boards[boardNum].canvas = canvas
@@ -133,8 +134,8 @@ class Board
     boardState = boardParams.board
     console.log boardParams
     @whitesTurn = boardParams.whitesTurn
-    turnLabel = if @whitesTurn then "White's turn" else "Black's turn"
-    $("#turn-label-#{@gameId}").html turnLabel
+    turnLabel = if @whitesTurn then "white's turn" else "black's turn"
+    $("#turn-label-#{@gameId}").html "Board #{@gameId} - #{turnLabel}"
 
     for unplacedPiece in boardParams.unplacedPieces
       type = unplacedPiece.text
@@ -214,7 +215,7 @@ class Board
 
   drawThreat: (img) =>
     return undefined if @dragLock
-    @debugPiece img
+    #@debugPiece img
     @setSquareColorForImg img, COLORS.red
     @canvas.redraw()
 
@@ -528,10 +529,8 @@ class Board
 
   toggleTurn: () ->
     @whitesTurn = not @whitesTurn
-    if @whitesTurn
-      $("#turn-label-#{@gameId}").text "White's turn"
-    else
-      $("#turn-label-#{@gameId}").text "Black's turn"
+    turnLabel = if @whitesTurn then "white's turn" else "black's turn"
+    $("#turn-label-#{@gameId}").html "Board #{@gameId} - #{turnLabel}"
 
     # recalculate threat for all pieces and squares on the board
     @calculateThreat()

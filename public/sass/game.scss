@@ -1,36 +1,54 @@
 body {
   font: {
-    family: 'Open Sans', Helvetica, sans-serif;
+      //family: 'Goudy Bookletter 1911', sans-serif;
+      family: 'EB Garamond', 'Garamond', sans-serif;
   }
+
 
   #modal {
+    border: 1px;
     width: 400px;
     height: 100px;
-    margin: 0 auto;
     display: none;
+    margin: 0 auto;
+    position: absolute;
+    z-index: 10;
   }
 
-  $board-side: 560px;
-  #boards {
-    //margin: 0 auto;
-    width: 1500px; 
-    height: $board-side; 
-    .board-container {
-      height: 440px;
-    }
-    .board {
-      width: 600px; 
-      height: 400px; 
-      float: left;
-      margin-right: 25px  ;
-    }
-    .pieces {
-      float: left;
-      width: 200px;
-      height: $board-side;
-      margin: 0 10px;
-      border: 1px solid #000000;
-    }
+  #title-bar {
+    height: 30px;
+    width: 100%;
+    background-color: #000;
+    position: fixed;
+    top: 0px;
+    margin-left: -8px;
   }
 
+  #container {
+    margin-top: 50px;
+
+    $board-side: 560px;
+    #boards {
+      //margin: 0 auto;
+      width: 580px; 
+      height: $board-side; 
+      .board-container {
+        height: 440px;
+        margin-bottom: 50px;
+      }
+      .board {
+        width: 600px; 
+        height: 400px; 
+        float: left;
+        margin-right: 25px  ;
+      }
+      .pieces {
+        float: left;
+        width: 200px;
+        height: $board-side;
+        margin: 0 10px;
+        border: 1px solid #000000;
+      }
+    }
+  }
 }

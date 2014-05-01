@@ -15,7 +15,8 @@
     red: "#e74c3c",
     dark: "#34495e",
     light: "#95a5a6",
-    green: "#27ae60"
+    green: "#27ae60",
+    midnight_blue: "#2c3e50"
   };
 
   squareSize = 50;
@@ -46,7 +47,7 @@
       boardNum = _ref[_i];
       canvas = oCanvas.create({
         canvas: "#board-" + boardNum,
-        background: COLORS.green
+        background: COLORS.midnight_blue
       });
       canvas.height = 8 * squareSize;
       canvas.width = 12 * squareSize;
@@ -190,8 +191,8 @@
       boardState = boardParams.board;
       console.log(boardParams);
       this.whitesTurn = boardParams.whitesTurn;
-      turnLabel = this.whitesTurn ? "White's turn" : "Black's turn";
-      $("#turn-label-" + this.gameId).html(turnLabel);
+      turnLabel = this.whitesTurn ? "white's turn" : "black's turn";
+      $("#turn-label-" + this.gameId).html("Board " + this.gameId + " - " + turnLabel);
       _ref = boardParams.unplacedPieces;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         unplacedPiece = _ref[_i];
@@ -316,7 +317,6 @@
       if (this.dragLock) {
         return void 0;
       }
-      this.debugPiece(img);
       this.setSquareColorForImg(img, COLORS.red);
       return this.canvas.redraw();
     };
@@ -681,12 +681,10 @@
     };
 
     Board.prototype.toggleTurn = function() {
+      var turnLabel;
       this.whitesTurn = !this.whitesTurn;
-      if (this.whitesTurn) {
-        $("#turn-label-" + this.gameId).text("White's turn");
-      } else {
-        $("#turn-label-" + this.gameId).text("Black's turn");
-      }
+      turnLabel = this.whitesTurn ? "white's turn" : "black's turn";
+      $("#turn-label-" + this.gameId).html("Board " + this.gameId + " - " + turnLabel);
       this.calculateThreat();
       this.resetColors();
       this.check = this.checkForCheck();
