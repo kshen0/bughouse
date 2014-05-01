@@ -322,10 +322,10 @@ class Board
               that.dropPiece @
 
   drawUnplacedPieces: () =>
-    for piece in @unplacedPieces
+    for piece, i in @unplacedPieces
       img = @canvas.display.image({
-        x: squareSize * 8 + squareSize / 2
-        y: squareSize / 2 
+        x: squareSize * 8 + (i % 4) * squareSize + squareSize / 2
+        y: Math.floor(i / 4) * squareSize + (squareSize / 2)
         origin: {x: "center", y: "center"}
         height: squareSize
         width: squareSize

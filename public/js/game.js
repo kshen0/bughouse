@@ -447,14 +447,14 @@
     };
 
     Board.prototype.drawUnplacedPieces = function() {
-      var img, instance, piece, _i, _len, _ref, _results;
+      var i, img, instance, piece, _i, _len, _ref, _results;
       _ref = this.unplacedPieces;
       _results = [];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        piece = _ref[_i];
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        piece = _ref[i];
         img = this.canvas.display.image({
-          x: squareSize * 8 + squareSize / 2,
-          y: squareSize / 2,
+          x: squareSize * 8 + (i % 4) * squareSize + squareSize / 2,
+          y: Math.floor(i / 4) * squareSize + (squareSize / 2),
           origin: {
             x: "center",
             y: "center"
