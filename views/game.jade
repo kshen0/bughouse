@@ -1,20 +1,28 @@
 doctype html 
 html
   head
-    link(rel='stylesheet', href='http://fonts.googleapis.com/css?family=Open+Sans')
+    link(href='http://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css')
     link(rel='stylesheet', href='/css/game.css')    
     script(src='/js/lib/jquery-1.11.0.min.js')
     script(src='/js/lib/socket.io.js')    
     title Bughouse Chess
   body
-    h1 Bughouse 
-    h3#player-label
-    div#boards
-      div.board-container
-        canvas.board#board-one
-        h3#turn-label White's turn
-      div.board-container
-        canvas.board#board-two
+    div#title-bar
+    p wat
+    div#container
+      h3#player-label
+      div#debug
+      div#boards
+        div.board-container
+          h4#turn-label-one Board one - white's turn
+          canvas.board#board-one
+          //h4#team1-white Choose
+          //h4#team2-black Choose
+        div.board-container
+          h4#turn-label-two Board two - white's turn
+          canvas.board#board-two
+          //h4#team2-white Choose
+          //h4#team1-black Choose
     script(src='/js/lib/ocanvas-2.5.1.min.js')    
     script(src='/js/game_utils.js')
     script(src='/js/game_classes.js')

@@ -1,18 +1,36 @@
 body {
-  font-family: 'Open Sans', Helvetica, sans-serif; }
-  body #boards {
-    width: 1500px;
-    height: 560px; }
-    body #boards .board-container {
-      height: 440px; }
-    body #boards .board {
-      width: 600px;
-      height: 400px;
-      float: left;
-      margin-right: 25px; }
-    body #boards .pieces {
-      float: left;
-      width: 200px;
-      height: 560px;
-      margin: 0 10px;
-      border: 1px solid #000000; }
+  font-family: 'EB Garamond', 'Garamond', sans-serif; }
+  body #modal {
+    border: 1px;
+    width: 400px;
+    height: 100px;
+    display: none;
+    margin: 0 auto;
+    position: absolute;
+    z-index: 10; }
+  body #title-bar {
+    height: 30px;
+    width: 100%;
+    background-color: #000;
+    position: fixed;
+    top: 0px;
+    margin-left: -8px; }
+  body #container {
+    margin-top: 50px; }
+    body #container #boards {
+      width: 800px;
+      height: 560px; }
+      body #container #boards .board-container {
+        height: 440px;
+        margin-bottom: 50px; }
+      body #container #boards .board {
+        width: 600px;
+        height: 400px;
+        float: left;
+        margin-right: 25px; }
+      body #container #boards .pieces {
+        float: left;
+        width: 200px;
+        height: 560px;
+        margin: 0 10px;
+        border: 1px solid #000000; }

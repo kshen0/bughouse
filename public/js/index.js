@@ -19,8 +19,8 @@ function init() {
   */
   socket.on('connect', function () {
     sessionId = socket.socket.sessionid;
-    console.log('Connected ' + sessionId);    
-    socket.emit('newUser', {id: sessionId, name: $('#name').val()});
+    //console.log('Connected ' + sessionId);    
+    //socket.emit('newUser', {id: sessionId, name: $('#name').val()});
   });
   //Helper function to update the participants' list
   function updateParticipants(participants) {

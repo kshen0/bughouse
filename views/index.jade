@@ -1,25 +1,14 @@
 doctype html 
 html
   head
-    link(rel='stylesheet', href='http://fonts.googleapis.com/css?family=Open+Sans')
+    //link(href='http://fonts.googleapis.com/css?family=EB+Garamond' rel='stylesheet' type='text/css')
+    link(href='http://fonts.googleapis.com/css?family=Goudy+Bookletter+1911' rel='stylesheet' type='text/css')
     link(rel='stylesheet', href='/css/style.css')    
     script(src='/js/lib/jquery-1.11.0.min.js')
-    script(src='/js/lib/socket.io.js')    
-    script(src='/js/index.js')
-    title Super Awesome Chatroom
+    //script(src='/js/lib/socket.io.js')    
+    //script(src='/js/index.js')
+    title Bughouse 
   body
-    h1 Super Awesome Chatroom
+    h1 Welcome to Bughouse 
     div
-      div.inlineBlock
-        span Your name:
-          input(type="text", value="Anonymous")#name
-        br
-        form#messageForm
-          textarea(rows="4", cols="50", placeholder="Share something!", maxlength=200)#outgoingMessage
-          input(type="button", value="Share", disabled=true)#send
-      div.inlineBlock.topAligned
-        b Participants
-        br
-        div#participants
-    div#messages
-    a(href="/game") Play bughouse
+      a(href="/game/create") Create a game 
